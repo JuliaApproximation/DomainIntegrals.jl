@@ -47,17 +47,20 @@ function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, 
     diff1 = domain1 \ domain2
     diff2 = domain2 \ domain1
     overlap = domain1 ∩ domain2
-    a, b = extrema(overlap)
-    if isempty(overlap)
+    if width(overlap) < 100eps(eltype(domain1))
+        # "if isempty(overlap)" is not sufficient, because the overlap may be numerically small
         [domain1 × domain2]
-    elseif isempty(diff1) && isempty(diff2)
-        [LowerRightTriangle(a, b), UpperRightTriangle(a, b)]
-    elseif isempty(diff1)
-        [LowerRightTriangle(a, b), UpperRightTriangle(a, b), domain1 × diff2]
-    elseif isempty(diff2)
-        [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b)]
     else
-        [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b), domain1 × diff2]
+        a, b = extrema(overlap)
+        if isempty(diff1) && isempty(diff2)
+            [LowerRightTriangle(a, b), UpperRightTriangle(a, b)]
+        elseif isempty(diff1)
+            [LowerRightTriangle(a, b), UpperRightTriangle(a, b), domain1 × diff2]
+        elseif isempty(diff2)
+            [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b)]
+        else
+            [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b), domain1 × diff2]
+        end
     end
 end
 
