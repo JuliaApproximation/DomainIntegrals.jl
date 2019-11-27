@@ -59,7 +59,7 @@ function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, 
         elseif isempty(diff2)
             [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b)]
         else
-            [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b), domain1 × diff2]
+            [diff1 × domain2, LowerRightTriangle(a, b), UpperRightTriangle(a, b), overlap × diff2]
         end
     end
 end
