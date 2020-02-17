@@ -13,5 +13,4 @@ include("strategy.jl")
 include("rules.jl")
 include("integral.jl")
 
-
 end # module

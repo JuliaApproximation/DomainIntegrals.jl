@@ -10,13 +10,10 @@ measures `μ` for which a weight function `w(x)` exists satisfying
 abstract type Measure{T} end
 
 domaintype(μ::Measure) = domaintype(typeof(μ))
-domaintype(::Type{M}) where {M <: Measure} = domaintype(supertype(M))
-domaintype(::Type{Measure{T}}) where {T} = T
+domaintype(::Type{<:Measure{T}}) where {T} = T
 
 codomaintype(μ::Measure) = codomaintype(typeof(μ))
-codomaintype(::Type{M}) where {M <: Measure} = codomaintype(supertype(M))
-codomaintype(::Type{Measure{T}}) where {T <: Real} = T
-codomaintype(::Type{Measure{T}}) where {T <: SVector} = subeltype(T)
+codomaintype(::Type{<:Measure{T}}) where {T} = prectype(T)
 
 weight(μ::Measure{T}, x) where {T} = weight(μ, convert(T, x))
 weight(μ::Measure{T}, x::T) where {T} =

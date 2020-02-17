@@ -13,8 +13,9 @@ errortype(x) = errortype(typeof(x))
 errortype(::Type{T}) where {T <: AbstractFloat} = T
 errortype(::Type{Complex{T}}) where {T} = errortype(T)
 
-unknown_error(T) = -one(errortype(T))
 zero_error(T) = zero(errortype(T))
+unknown_error(T) = -one(errortype(T))
+unknown_error(z::Number) = -one(z)
 
 function zero_result(integrand, ::Type{S}) where {S}
     T = returntype(integrand, S)
@@ -135,11 +136,6 @@ function apply_quad(qs::Q_GaussLegendre, integrand, domain::AbstractInterval, me
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = (b-a)/2
-    T = typeof(integrand(a))
-    z = zero(T)
-    n = length(qs.x)
-    for i in 1:n
-        z += sum(qs.w[i]*integrand(a + (qs.x[i]+1)*D)*D)
-    end
+    z = sum(qs.w[i]*integrand(a + (qs.x[i]+1)*D)*D for i in 1:length(qs.x))
     z, unknown_error(z)
 end
