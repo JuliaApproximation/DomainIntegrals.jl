@@ -7,6 +7,8 @@ abstract type FixedRuleStrategy <: QuadratureStrategy end
 
 abstract type RuleFamilyStrategy <: QuadratureStrategy end
 
+export QuadAdaptive
+"An adaptive quadrature strategy"
 struct QuadAdaptive <: AdaptiveStrategy
 end
 
