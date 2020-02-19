@@ -3,34 +3,56 @@ abstract type QuadratureStrategy end
 
 abstract type AdaptiveStrategy <: QuadratureStrategy end
 
-abstract type FixedRuleStrategy <: QuadratureStrategy end
-
-abstract type RuleFamilyStrategy <: QuadratureStrategy end
 
 export QuadAdaptive
 "An adaptive quadrature strategy"
 struct QuadAdaptive <: AdaptiveStrategy
 end
 
+"Adaptive quadrature using quadgk"
 struct Q_quadgk <: AdaptiveStrategy
 end
 
+"Adaptive quadrature using hcubature"
 struct Q_hcubature <: AdaptiveStrategy
 end
 
+"Apply a fixed quadrature rule"
+abstract type FixedRule <: QuadratureStrategy end
 
-struct Q_GaussLegendre{T} <: FixedRuleStrategy
-    x   ::  Array{T,1}
-    w   ::  Array{T,1}
+points(s::FixedRule) = s.x
+weights(s::FixedRule) = s.w
+
+export BestRule
+"Use a quadrature rule adapted to the measure."
+struct BestRule <: QuadratureStrategy
+    n   ::  Int
 end
 
-Q_GaussLegendre(n::Int = 4) = Q_GaussLegendre{Float64}(n)
-function Q_GaussLegendre{Float64}(n::Int)
-    x, w = FastGaussQuadrature.gausslegendre(n)
-    Q_GaussLegendre(x, w)
+export Q_GaussLegendre,
+    Q_GaussJacobi,
+    Q_GaussLaguerre,
+    Q_GaussHermite
+
+"Apply a fixed quadrature rule defined on `[-1,1]`."
+struct FixedRuleInterval{T} <: FixedRule
+    x       ::  Vector{T}
+    w       ::  Vector{T}
 end
 
-function Q_GaussLegendre{T}(n::Int) where {T}
-    x, w = GaussQuadrature.legendre(T, n)
-    Q_GaussLegendre{T}(x, w)
+"Apply a fixed quadrature rule defined on the halfline `[0,∞)`."
+struct FixedRuleHalfLine{T} <: FixedRule
+    x       ::  Vector{T}
+    w       ::  Vector{T}
 end
+
+"Apply a fixed quadrature rule defined on the real line."
+struct FixedRuleRealLine{T} <: FixedRule
+    x       ::  Vector{T}
+    w       ::  Vector{T}
+end
+
+Q_GaussLegendre(args...) = FixedRuleInterval(gausslegendre(args...)...)
+Q_GaussJacobi(args...) = FixedRuleInterval(gaussjacobi(args...)...)
+Q_GaussLaguerre(args...) = FixedRuleHalfLine(gausslaguerre(args...)...)
+Q_GaussHermite(args...) = FixedRuleRealLine(gausshermite(args...)...)

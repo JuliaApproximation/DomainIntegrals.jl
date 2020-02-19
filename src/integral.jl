@@ -27,6 +27,7 @@ tolerance(::Type{T}) where {T<:AbstractFloat} = 10eps(T)
 tolerance(::Type{Complex{T}}) where {T} = tolerance(T)
 tolerance(::Type{SVector{N,T}}) where {N,T} = tolerance(T)
 
+export integral
 """
 Compute an integral of the given integrand on the given domain,
 or with the given measure.
@@ -46,6 +47,9 @@ function integral(qs::QuadratureStrategy, integrand, arg1, args...)
     I
 end
 
+export quadrature
+"Like integral, but also returns an error estimate (if applicable)."
+function quadrature end
 
 
 # The process is as follows:
@@ -114,7 +118,7 @@ apply_productquad(qs, integrand, domain, measure, sing, domains...) =
     fallback_quadrature(qs, integrand, domain, measure, sing)
 
 fallback_quadrature(qs, integrand, domain, measure, sing) =
-    error("Don't know how to integrate on $domain.")
+    error("Don't know how to integrate on $domain with strategy $(qs).")
 
 
 # For quadgk, we only know how to compute intervals
@@ -132,10 +136,26 @@ function apply_hcubature(integrand, domains::AbstractInterval...)
     hcubature(integrand, a, b)
 end
 
-function apply_quad(qs::Q_GaussLegendre, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::FixedRuleInterval, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = (b-a)/2
-    z = sum(qs.w[i]*integrand(a + (qs.x[i]+1)*D)*D for i in 1:length(qs.x))
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(a + (x[i]+1)*D)*D for i in 1:length(x))
+    z, unknown_error(z)
+end
+
+function apply_quad(qs::FixedRuleHalfLine, integrand, domain::HalfLine, measure::AbstractLebesgueMeasure, sing)
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
+    z, unknown_error(z)
+end
+
+function apply_quad(qs::FixedRuleRealLine, integrand, domain::FullSpace, measure::AbstractLebesgueMeasure, sing)
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
     z, unknown_error(z)
 end

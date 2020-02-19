@@ -103,6 +103,18 @@ end
 quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
     quadrature_d(qs, integrand, domain, measure, sing)
 
+# The "best" rule for certain measures becomes a Gauss rule
+quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::LegendreMeasure, sing) =
+    quadrature_m(Q_GaussLegendre(qs.n), integrand, domain, μ, sing)
+
+quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::JacobiMeasure, sing) =
+    quadrature_m(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreMeasure(), sing)
+
+quadrature_m(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreMeasure{T}, sing) where {T} =
+    quadrature_m(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, LebesgueMeasure{T}(), sing)
+
+quadrature_m(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteMeasure{T}, sing) where {T} =
+    quadrature_m(Q_GaussHermite(qs.n), integrand, domain, LebesgueMeasure{T}(), sing)
 
 # function quadrature_m(qs, integrand, domain::AbstractInterval, measure::ChebyshevMeasure, sing)
 #     a, b = extrema(domain)
