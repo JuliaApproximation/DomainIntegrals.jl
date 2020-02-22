@@ -1,6 +1,7 @@
 
 using Test
 using DomainSets
+using HCubature
 
 using DomainIntegrals
 
