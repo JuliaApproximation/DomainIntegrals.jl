@@ -16,7 +16,7 @@ function splitdomain_point(x::T, domain::AbstractInterval{T}) where {T}
     a, b = extrema(domain)
     if (x > a+tol) && (x < b-tol)
         # x is in [a,b] and sufficiently far away from the boundary
-        (a..x, x..b)
+        (a..x-tol, x+tol..b)
     elseif (x < a-tol) || (x > b+tol)
         # x is not in [a,b] and sufficiently far away from the boundary
         (domain,)
