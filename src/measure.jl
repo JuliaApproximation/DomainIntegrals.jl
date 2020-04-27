@@ -1,48 +1,83 @@
 
+export support,
+    domaintype,
+    codomaintype,
+    isdiscrete,
+    iscontinuous,
+    isnormalized,
+    weight,
+    LebesgueMeasure,
+    UnitLebesgueMeasure,
+    LegendreMeasure,
+    JacobiMeasure,
+    LaguerreMeasure,
+    HermiteMeasure,
+    DiracMeasure,
+    point
+
 """
-A measure on a set (or `Domain{T}`) is a function that assigns a non-negative
-number to subsets of that set. The support of a `Measure{T}` is a `Domain{T}`.
+Supertype of all measures.
 
-We use measures mostly to define weighted integrals, i.e., we consider
-measures `μ` for which a weight function `w(x)` exists satisfying
-`dμ = w(x) dx`.
+The support of an `AbstractMeasure{T}` is a `Domain{T}`.
 """
-abstract type Measure{T} end
+abstract type AbstractMeasure{T} end
 
-export support
-"Return the support of the measure?"
-function support end
+"""
+A `Measure{T}` is a continuous measure that is defined in terms of a
+weightfunction: `dμ = w(x) dx`.
+"""
+abstract type Measure{T} <: AbstractMeasure{T} end
 
-export domaintype
-domaintype(μ::Measure) = domaintype(typeof(μ))
-domaintype(::Type{<:Measure{T}}) where {T} = T
+"""
+A `DiscreteMeasure` is defined in terms of a discrete grid and an
+associated weight vector.
+"""
+abstract type DiscreteMeasure{T} <: Measure{T} end
 
-export codomaintype
+"Return the support of the measure"
+support(μ::Measure{T}) where {T} = FullSpace{T}()
+
+"Is the measure discrete?"
+isdiscrete(μ::Measure) = false
+isdiscrete(μ::DiscreteMeasure) = true
+
+"Is the measure continuous?"
+iscontinuous(μ::Measure) = true
+iscontinuous(μ::DiscreteMeasure) = false
+
+
+"Is the measure normalized?"
+isnormalized(μ::AbstractMeasure) = false
+
+domaintype(μ::AbstractMeasure) = domaintype(typeof(μ))
+domaintype(::Type{<:AbstractMeasure{T}}) where {T} = T
+
 "What is the codomain type of the measure?"
-codomaintype(μ::Measure) = codomaintype(typeof(μ))
-codomaintype(::Type{<:Measure{T}}) where {T} = prectype(T)
+codomaintype(μ::AbstractMeasure) = codomaintype(typeof(μ))
+codomaintype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
 
-export weight
-"The weight function associated with the measure."
+"Evaluate the weight function associated with the measure."
 weight(μ::Measure{T}, x) where {T} = weight(μ, convert(T, x))
 weight(μ::Measure{T}, x::T) where {T} =
     x ∈ support(μ) ? unsafe_weight(μ, x) : zero(codomaintype(μ))
+
+
+#################
+# Basic measures
+#################
 
 "Supertype of Lebesgue measures"
 abstract type AbstractLebesgueMeasure{T} <: Measure{T} end
 
 unsafe_weight(μ::AbstractLebesgueMeasure, x) = one(codomaintype(μ))
 
-export LebesgueMeasure
 "The Lebesgue measure on the space `FullSpace{T}`."
 struct LebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
 end
 
 LebesgueMeasure() = LebesgueMeasure{Float64}()
 
-support(μ::LebesgueMeasure{T}) where {T} = FullSpace{T}()
 
-export UnitLebesgueMeasure
 "The Lebesgue measure on the unit interval `[0,1]`."
 struct UnitLebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
 end
@@ -51,7 +86,29 @@ UnitLebesgueMeasure() = UnitLebesgueMeasure{Float64}()
 
 support(μ::UnitLebesgueMeasure{T}) where {T} = UnitInterval{T}()
 
-export LegendreMeasure
+
+#################
+# Applications
+#################
+
+
+"A point measure"
+struct DiracMeasure{T} <: DiscreteMeasure{T}
+    point   ::  T
+end
+
+point(μ::DiracMeasure) = μ.point
+support(μ::DiracMeasure) = Point(μ.point)
+
+isnormalized(μ::DiracMeasure) = true
+
+unsafe_weight(μ::DiracMeasure, x) = convert(codomaintype(μ), Inf)
+
+
+
+## Some widely used measures associated with orthogonal polynomials follow
+
+
 "The Lebesgue measure on the interval `[-1,1]`."
 struct LegendreMeasure{T} <: AbstractLebesgueMeasure{T}
 end
@@ -60,7 +117,6 @@ LegendreMeasure() = LegendreMeasure{Float64}()
 support(μ::LegendreMeasure{T}) where {T} = ChebyshevInterval{T}()
 
 
-export JacobiMeasure
 "The Jacobi measure on the interval `[-1,1]`."
 struct JacobiMeasure{T} <: Measure{T}
     α   ::  T
@@ -78,7 +134,6 @@ support(μ::JacobiMeasure{T}) where {T} = ChebyshevInterval{T}()
 unsafe_weight(μ::JacobiMeasure, x) = (1+x)^μ.α * (1-x)^μ.β
 
 
-export LaguerreMeasure
 "The generalised Laguerre measure on the halfline `[0,∞)`."
 struct LaguerreMeasure{T} <: Measure{T}
     α   ::  T
@@ -93,7 +148,7 @@ support(μ::LaguerreMeasure{T}) where {T} = HalfLine{T}()
 
 unsafe_weight(μ::LaguerreMeasure, x) = exp(-x) * x^μ.α
 
-export HermiteMeasure
+
 "The Hermite measure with weight exp(-x^2) on the real line."
 struct HermiteMeasure{T} <: Measure{T}
 end
@@ -102,16 +157,3 @@ HermiteMeasure() = HermiteMeasure{Float64}()
 support(μ::HermiteMeasure{T}) where {T} = FullSpace{T}()
 
 unsafe_weight(μ::HermiteMeasure, x) = exp(-x^2)
-
-
-export DiracMeasure
-"A point measure"
-struct DiracMeasure{T} <: Measure{T}
-    point   ::  T
-end
-
-export point
-point(μ::DiracMeasure) = μ.point
-support(μ::DiracMeasure) = Point(μ.point)
-
-unsafe_weight(μ::DiracMeasure, x) = convert(codomaintype(μ), Inf)

@@ -1,4 +1,7 @@
 
+export integral,
+    quadrature
+
 """
 The suggested quadrature strategy based on the arguments supplied to
 the `integral` function.
@@ -27,7 +30,7 @@ tolerance(::Type{T}) where {T<:AbstractFloat} = 10eps(T)
 tolerance(::Type{Complex{T}}) where {T} = tolerance(T)
 tolerance(::Type{SVector{N,T}}) where {N,T} = tolerance(T)
 
-export integral
+
 """
 Compute an integral of the given integrand on the given domain,
 or with the given measure.
@@ -47,7 +50,6 @@ function integral(qs::QuadratureStrategy, integrand, arg1, args...)
     I
 end
 
-export quadrature
 "Like integral, but also returns an error estimate (if applicable)."
 function quadrature end
 
@@ -67,21 +69,21 @@ function quadrature end
 # - the default domain is the support of the measure (if given)
 # - the default measure for Domain{T} is LebesgueMeasure{T}
 # - the default singularity is no singularity
-quadrature(qs::QuadratureStrategy, integrand, measure::Measure) =
+quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure) =
     quadrature(qs, integrand, support(measure), measure)
-quadrature(qs::QuadratureStrategy, integrand, measure::Measure, sing::Singularity) =
+quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure, sing::Singularity) =
     quadrature(qs, integrand, support(measure), measure, sing)
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}) where {T} =
     quadrature(qs, integrand, domain, LebesgueMeasure{T}())
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}, sing::Singularity) where {T} =
     quadrature(qs, integrand, domain, LebesgueMeasure{T}(), sing)
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::Measure) =
+quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure) =
     quadrature(qs, integrand, domain, measure, NoSingularity())
 quadrature(integrand, arg1, args...) =
     quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
 
 # go to step S once we have the correct signature
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::Measure, sing::Singularity) =
+quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure, sing::Singularity) =
     quadrature_s(qs, integrand, domain, measure, sing)
 
 # STEP S: dispatch on the singularity
@@ -133,7 +135,7 @@ apply_productquad(::Q_hcubature, integrand, domain, measure::AbstractLebesgueMea
 function apply_hcubature(integrand, domains::AbstractInterval...)
     a = map(leftendpoint, domains)
     b = map(rightendpoint, domains)
-    hcubature(integrand, a, b)
+    hcubature(integrand, a, b, maxevals = 10000)
 end
 
 function apply_quad(qs::FixedRuleInterval, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)

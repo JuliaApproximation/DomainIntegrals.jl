@@ -1,10 +1,17 @@
 
+export QuadAdaptive,
+    BestRule,
+    Q_GaussLegendre,
+    Q_GaussJacobi,
+    Q_GaussLaguerre,
+    Q_GaussHermite
+
+
 abstract type QuadratureStrategy end
 
 abstract type AdaptiveStrategy <: QuadratureStrategy end
 
 
-export QuadAdaptive
 "An adaptive quadrature strategy"
 struct QuadAdaptive <: AdaptiveStrategy
 end
@@ -23,16 +30,11 @@ abstract type FixedRule <: QuadratureStrategy end
 points(s::FixedRule) = s.x
 weights(s::FixedRule) = s.w
 
-export BestRule
 "Use a quadrature rule adapted to the measure."
 struct BestRule <: QuadratureStrategy
     n   ::  Int
 end
 
-export Q_GaussLegendre,
-    Q_GaussJacobi,
-    Q_GaussLaguerre,
-    Q_GaussHermite
 
 "Apply a fixed quadrature rule defined on `[-1,1]`."
 struct FixedRuleInterval{T} <: FixedRule
