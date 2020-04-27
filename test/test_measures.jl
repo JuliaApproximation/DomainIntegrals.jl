@@ -37,4 +37,12 @@ function test_measures()
     @test point(m4) == x
     @test weight(m4, x) == Inf
     @test weight(m4, x+1) == 0
+
+    m5 = GaussianMeasure{SVector{2,Float64}}()
+    @test !isdiscrete(m5)
+    @test iscontinuous(m5)
+    @test isnormalized(m5)
+    @test domaintype(m5) == SVector{2,Float64}
+    @test support(m5) == FullSpace{SVector{2,Float64}}()
+    @test weight(m5, SVector(0.0,0.0)) ≈ 1/(2pi)
 end

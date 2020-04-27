@@ -12,6 +12,7 @@ export support,
     JacobiMeasure,
     LaguerreMeasure,
     HermiteMeasure,
+    GaussianMeasure,
     DiracMeasure,
     point
 
@@ -21,6 +22,8 @@ Supertype of all measures.
 The support of an `AbstractMeasure{T}` is a `Domain{T}`.
 """
 abstract type AbstractMeasure{T} end
+
+prectype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
 
 """
 A `Measure{T}` is a continuous measure that is defined in terms of a
@@ -154,6 +157,14 @@ struct HermiteMeasure{T} <: Measure{T}
 end
 HermiteMeasure() = HermiteMeasure{Float64}()
 
-support(μ::HermiteMeasure{T}) where {T} = FullSpace{T}()
-
 unsafe_weight(μ::HermiteMeasure, x) = exp(-x^2)
+
+
+"The Gaussian measure with weight exp(-|x|^2/2)."
+struct GaussianMeasure{T} <: Measure{T}
+end
+GaussianMeasure() = GaussianMeasure{Float64}()
+
+isnormalized(μ::GaussianMeasure) = true
+
+unsafe_weight(μ::GaussianMeasure, x) = 1/(2*convert(prectype(μ), pi))^(length(x)/2) * exp(-norm(x)^2)

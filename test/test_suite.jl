@@ -2,6 +2,7 @@
 using Test
 using DomainSets
 using HCubature
+using StaticArrays
 
 using DomainIntegrals
 

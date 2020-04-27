@@ -1,6 +1,6 @@
 module DomainIntegrals
 
-using QuadGK
+using QuadGK, LinearAlgebra
 using GaussQuadrature, FastGaussQuadrature, HCubature
 
 using StaticArrays
