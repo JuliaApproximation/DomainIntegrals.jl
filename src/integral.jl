@@ -125,7 +125,7 @@ fallback_quadrature(qs, integrand, domain, measure, sing) =
 
 # For quadgk, we only know how to compute intervals
 apply_quad(::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing) =
-    quadgk(integrand, extrema(domain)...)
+    quadgk(integrand, extrema(domain)...; maxevals = 10000)
 
 # hcubature works for rectangles with the Lebesgue measure
 apply_productquad(::Q_hcubature, integrand, domain, measure::AbstractLebesgueMeasure, sing, domains::AbstractInterval...) =
