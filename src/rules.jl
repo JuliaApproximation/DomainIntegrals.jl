@@ -93,6 +93,18 @@ function quadrature_m(qs, integrand, domain, δ::DiracMeasure, sing)
     I, E
 end
 
+function quadrature_m(qs, integrand, domain, μ::DiscreteMeasure, sing)
+    x = points(μ)
+    w = weights(μ)
+    I,E = zero_result(integrand, eltype(domain))
+    for i in 1:length(x)
+        if x[i] ∈ domain
+            I += w[i]*integrand(x[i])
+        end
+    end
+    I, E
+end
+
 # We replace all measures by the LebesgueMeasure on the space
 function quadrature_m(qs, integrand, domain, measure::Measure{T}, sing) where {T}
     integrand2 = t -> integrand(t) * unsafe_weight(measure, t)

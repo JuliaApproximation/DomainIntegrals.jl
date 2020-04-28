@@ -6,8 +6,16 @@ using GaussQuadrature, FastGaussQuadrature, HCubature
 using StaticArrays
 using IntervalSets, DomainSets
 
-import DomainSets: EmptySpace, FullSpace,
-    domaintype
+import Base: convert
+
+import DomainSets:
+    EmptySpace,
+    FullSpace,
+    domaintype,
+    codomaintype,
+    prectype,
+    numtype
+
 
 include("common.jl")
 include("gauss.jl")

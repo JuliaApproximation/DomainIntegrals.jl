@@ -10,7 +10,7 @@ function test_measures()
     m2 = UnitLebesgueMeasure()
     @test !isdiscrete(m2)
     @test iscontinuous(m2)
-    @test !isnormalized(m2)
+    @test isnormalized(m2)
     @test domaintype(m2) == Float64
     @test support(m2) == UnitInterval()
     @test weight(m2, 0.4) == 1
@@ -37,6 +37,8 @@ function test_measures()
     @test point(m4) == x
     @test weight(m4, x) == Inf
     @test weight(m4, x+1) == 0
+    @test weight(m4, big(x)) == Inf
+    @test weight(m4, big(x+1)) == 0
 
     m5 = GaussianMeasure{SVector{2,Float64}}()
     @test !isdiscrete(m5)
@@ -45,4 +47,18 @@ function test_measures()
     @test domaintype(m5) == SVector{2,Float64}
     @test support(m5) == FullSpace{SVector{2,Float64}}()
     @test weight(m5, SVector(0.0,0.0)) ≈ 1/(2pi)
+    @test weight(m5, SVector(0,0)) ≈ 1/(2pi)
+    @test weight(m5, SVector(big(0),big(0))) ≈ 1/(2pi)
+    @test weight(m5, SVector(big(0.0),big(0.0))) ≈ 1/(2pi)
+
+    m6 = LaguerreMeasure(0.0)
+    @test !isdiscrete(m6)
+    @test iscontinuous(m6)
+    @test isnormalized(m6)
+    @test !isnormalized(LaguerreMeasure(0.1))
+    @test domaintype(m6) == Float64
+    @test support(m6) == HalfLine()
+    @test weight(m6, 0.4) == exp(-0.4)
+    @test weight(m6, -0.4) == 0
+    @test weight(m6, big(0.4)) == exp(-big(0.4))
 end
