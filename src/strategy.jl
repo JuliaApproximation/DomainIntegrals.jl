@@ -13,16 +13,40 @@ abstract type AdaptiveStrategy <: QuadratureStrategy end
 
 
 "An adaptive quadrature strategy"
-struct QuadAdaptive <: AdaptiveStrategy
+struct QuadAdaptive{T} <: AdaptiveStrategy
+    atol    ::  T
+    rtol    ::  T
+    maxevals    ::  Int
+
+    QuadAdaptive{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
+
+QuadAdaptive() = QuadAdaptive{Float64}()
 
 "Adaptive quadrature using quadgk"
-struct Q_quadgk <: AdaptiveStrategy
+struct Q_quadgk{T} <: AdaptiveStrategy
+    atol    ::  T
+    rtol    ::  T
+    maxevals    ::  Int
+
+    Q_quadgk{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
 
+Q_quadgk() = Q_quadgk{Float64}()
+Q_quadgk(qs::QuadAdaptive{T}) where {T} = Q_quadgk{T}(qs.atol, qs.rtol, qs.maxevals)
+
+
 "Adaptive quadrature using hcubature"
-struct Q_hcubature <: AdaptiveStrategy
+struct Q_hcubature{T} <: AdaptiveStrategy
+    atol    ::  T
+    rtol    ::  T
+    maxevals    ::  Int
+
+    Q_hcubature{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
+
+Q_hcubature() = Q_hcubature{Float64}()
+Q_hcubature(qs::QuadAdaptive{T}) where {T} = Q_hcubature{T}(qs.atol, qs.rtol, qs.maxevals)
 
 "Apply a fixed quadrature rule"
 abstract type FixedRule <: QuadratureStrategy end

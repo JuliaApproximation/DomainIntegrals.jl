@@ -102,10 +102,10 @@ quadrature_d(qs, integrand, domain, measure, sing) =
 # Selection: use a suitable quadrature strategy
 
 # Generic adaptive quadrature in 1D invokes QuadGK, everywhere else it uses hcubature
-select_quad(::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T<:Number} =
-    apply_quad(Q_quadgk(), integrand, domain, measure, sing)
-select_quad(::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T} =
-    apply_quad(Q_hcubature(), integrand, domain, measure, sing)
+select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T<:Number} =
+    apply_quad(Q_quadgk(qs), integrand, domain, measure, sing)
+select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T} =
+    apply_quad(Q_hcubature(qs), integrand, domain, measure, sing)
 select_quad(qs, integrand, domain, measure, sing) =
     apply_quad(qs, integrand, domain, measure, sing)
 
@@ -124,8 +124,8 @@ fallback_quadrature(qs, integrand, domain, measure, sing) =
 
 
 # For quadgk, we only know how to compute intervals
-apply_quad(::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing) =
-    quadgk(integrand, extrema(domain)...)
+apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing) =
+    quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
 
 # hcubature works for rectangles with the Lebesgue measure
 apply_productquad(::Q_hcubature, integrand, domain, measure::AbstractLebesgueMeasure, sing, domains::AbstractInterval...) =

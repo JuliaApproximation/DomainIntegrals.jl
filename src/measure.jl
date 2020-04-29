@@ -15,6 +15,9 @@ export support,
     DomainLebesgueMeasure,
     LegendreMeasure,
     JacobiMeasure,
+    ChebyshevTMeasure,
+    ChebyshevMeasure,
+    ChebyshevUMeasure,
     LaguerreMeasure,
     HermiteMeasure,
     GaussianMeasure,
@@ -166,6 +169,57 @@ JacobiMeasure(α::N, β::N) where {N<:Number} = JacobiMeasure(float(α), float(�
 similar(μ::JacobiMeasure, ::Type{T}) where {T <: Real} = JacobiMeasure{T}(μ.α, μ.β)
 support(μ::JacobiMeasure{T}) where {T} = ChebyshevInterval{T}()
 unsafe_weight(μ::JacobiMeasure, x) = (1+x)^μ.α * (1-x)^μ.β
+
+
+"""
+The `Chebyshev` or `ChebyshevT` measure is the measure on `[-1,1]` with the
+Chebyshev weight `w(x) = 1/√(1-x^2)`.
+"""
+struct ChebyshevTMeasure{T} <: Measure{T}
+end
+ChebyshevTMeasure() = ChebyshevTMeasure{Float64}()
+
+const ChebyshevMeasure = ChebyshevTMeasure
+
+similar(μ::ChebyshevTMeasure, ::Type{T}) where {T <: Real} = ChebyshevTMeasure{T}()
+support(μ::ChebyshevTMeasure{T}) where {T} = ChebyshevInterval{T}()
+unsafe_weight(μ::ChebyshevTMeasure, x) = 1/sqrt(1-x^2)
+
+
+"""
+The ChebyshevU measure is the measure on `[-1,1]` with the Chebyshev weight
+of the second kind `w(x) = √(1-x^2).`
+"""
+struct ChebyshevUMeasure{T} <: Measure{T}
+end
+ChebyshevUMeasure() = ChebyshevUMeasure{Float64}()
+
+similar(μ::ChebyshevUMeasure, ::Type{T}) where {T <: Real} = ChebyshevUMeasure{T}()
+support(μ::ChebyshevUMeasure{T}) where {T} = ChebyshevInterval{T}()
+unsafe_weight(μ::ChebyshevUMeasure, x) = sqrt(1-x^2)
+
+
+convert(::Type{JacobiMeasure}, μ::LegendreMeasure{T}) where {T} =
+    JacobiMeasure{T}(0, 0)
+convert(::Type{JacobiMeasure}, μ::ChebyshevTMeasure{T}) where {T} =
+    JacobiMeasure{T}(-one(T)/2, -one(T)/2)
+convert(::Type{JacobiMeasure}, μ::ChebyshevUMeasure{T}) where {T} =
+    JacobiMeasure{T}(one(T)/2, one(T)/2)
+
+function convert(::Type{ChebyshevTMeasure}, μ::JacobiMeasure{T}) where {T}
+    (μ.α ≈ -one(T)/2 && μ.β ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTMeasure, μ))
+    ChebyshevTMeasure{T}()
+end
+
+function convert(::Type{ChebyshevUMeasure}, μ::JacobiMeasure{T}) where {T}
+    (μ.α ≈ one(T)/2 && μ.β ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUMeasure, μ))
+    ChebyshevUMeasure{T}()
+end
+
+function convert(::Type{LegendreMeasure}, μ::JacobiMeasure{T}) where {T}
+    (μ.α ≈ 0 && μ.β ≈ 0) || throw(InexactError(:convert, LegendreMeasure, μ))
+    LegendreMeasure{T}()
+end
 
 
 "The generalised Laguerre measure on the halfline `[0,∞)`."

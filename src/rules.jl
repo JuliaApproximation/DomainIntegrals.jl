@@ -111,6 +111,27 @@ function quadrature_m(qs, integrand, domain, measure::Measure{T}, sing) where {T
     quadrature_d(qs, integrand2, domain, LebesgueMeasure{T}(), sing)
 end
 
+# Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
+function quadrature_m(qs::AdaptiveStrategy, integrand, domain::FullSpace{T}, measure::HermiteMeasure{T}, sing) where {T}
+    integrand2 = t -> integrand(t) * unsafe_weight(measure, t)
+    U = sqrt(-log(eps(Float64)))
+    quadrature_d(qs, integrand2, -U..U, LebesgueMeasure{T}(), sing)
+end
+
+# apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
+function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+    Tpi = convert(T, pi)
+    integrand2 = t -> Tpi*integrand(cos(Tpi*t))
+    quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
+end
+
+# apply the cosine map for integrals with the ChebyshevU weight as well
+function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+    Tpi = convert(T, pi)
+    integrand2 = t -> Tpi*integrand(cos(Tpi*t))*sin(Tpi*t)^2
+    quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
+end
+
 # Lebesgue measures can pass through unaltered
 quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
     quadrature_d(qs, integrand, domain, measure, sing)
