@@ -1,5 +1,7 @@
 
 export QuadAdaptive,
+    Q_quadgk,
+    Q_hcubature,
     BestRule,
     Q_GaussLegendre,
     Q_GaussJacobi,
@@ -13,28 +15,38 @@ abstract type AdaptiveStrategy{T} <: QuadratureStrategy end
 
 prectype(::Type{<:AdaptiveStrategy{T}}) where {T} = prectype(T)
 
+def_atol() = def_atol(Float64)
+def_rtol() = def_rtol(Float64)
+
+def_atol(::Type{T}) where {T} = zero(T)
+def_rtol(::Type{T}) where {T} = sqrt(eps(T))
+def_rtol(x) = def_rtol(typeof(x))
+
+def_maxevals() = 10^4
 
 "An adaptive quadrature strategy"
 struct QuadAdaptive{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int
-
-    QuadAdaptive{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
 
-QuadAdaptive() = QuadAdaptive{Float64}()
+QuadAdaptive(; atol = def_atol(), rtol = def_rtol(atol), maxevals = def_maxevals()) = QuadAdaptive(atol, rtol, maxevals)
+QuadAdaptive(atol, rtol, maxevals) = QuadAdaptive(promote(atol,rtol)..., maxevals)
+QuadAdaptive(atol::T, rtol::T, maxevals) where {T} = QuadAdaptive{T}(atol, rtol, maxevals)
+
 
 "Adaptive quadrature using quadgk"
 struct Q_quadgk{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int
-
-    Q_quadgk{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
 
-Q_quadgk() = Q_quadgk{Float64}()
+Q_quadgk(; atol = def_atol(), rtol = def_rtol(atol), maxevals = def_maxevals()) = Q_quadgk(atol, rtol, maxevals)
+Q_quadgk(atol, rtol, maxevals) = Q_quadgk(promote(atol,rtol)..., maxevals)
+Q_quadgk(atol::T, rtol::T, maxevals) where {T} = Q_quadgk{T}(atol, rtol, maxevals)
+
 Q_quadgk(qs::QuadAdaptive{T}) where {T} = Q_quadgk{T}(qs.atol, qs.rtol, qs.maxevals)
 
 
@@ -43,12 +55,14 @@ struct Q_hcubature{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int
-
-    Q_hcubature{T}(atol = zero(T), rtol = sqrt(eps(T)), maxevals = 10^4) where {T} = new(atol, rtol, maxevals)
 end
 
-Q_hcubature() = Q_hcubature{Float64}()
+Q_hcubature(; atol = 0.0, rtol = sqrt(eps(atol)), maxevals = 10^4) = Q_hcubature(atol, rtol, maxevals)
+Q_hcubature(atol, rtol, maxevals) = Q_hcubature(promote(atol,rtol)..., maxevals)
+Q_hcubature(atol::T, rtol::T, maxevals) where {T} = Q_hcubature{T}(atol, rtol, maxevals)
+
 Q_hcubature(qs::QuadAdaptive{T}) where {T} = Q_hcubature{T}(qs.atol, qs.rtol, qs.maxevals)
+
 
 "Apply a fixed quadrature rule"
 abstract type FixedRule <: QuadratureStrategy end

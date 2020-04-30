@@ -45,8 +45,8 @@ function integral(integrand, arg1, args...)
     I, E = quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
     I
 end
-function integral(qs::QuadratureStrategy, integrand, arg1, args...)
-    I, E = quadrature(qs, integrand, arg1, args...)
+function integral(qs::QuadratureStrategy, integrand, args...)
+    I, E = quadrature(qs, integrand, args...)
     I
 end
 
@@ -79,6 +79,13 @@ quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}, sing::Singulari
     quadrature(qs, integrand, domain, LebesgueMeasure{T}(), sing)
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure) =
     quadrature(qs, integrand, domain, measure, NoSingularity())
+quadrature(qs::FixedRuleInterval{T}, integrand) where {T} =
+    quadrature(qs, integrand, ChebyshevInterval{T}())
+quadrature(qs::FixedRuleHalfLine{T}, integrand) where {T} =
+    quadrature(qs, integrand, HalfLine{T}())
+quadrature(qs::FixedRuleRealLine{T}, integrand) where {T} =
+    quadrature(qs, integrand, FullSpace{T}())
+
 quadrature(integrand, arg1, args...) =
     quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
 
@@ -144,6 +151,7 @@ function apply_hcubature(integrand, domains::AbstractInterval...)
 end
 
 function apply_quad(qs::FixedRuleInterval, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+    # TODO: use Jacobians for this
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = (b-a)/2

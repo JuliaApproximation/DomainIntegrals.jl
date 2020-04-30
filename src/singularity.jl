@@ -1,4 +1,9 @@
 
+export SingularPoint,
+    LogPointSingularity,
+    AlgebraicPointSingularity,
+    DiagonalSingularity
+
 "The supertype of all kinds of singularities of an integrand."
 abstract type Singularity end
 
@@ -11,7 +16,7 @@ abstract type PointSingularity <: Singularity end
 point(s::PointSingularity) = s.point
 
 "An unspecified singularity occurring at a specific point."
-struct GenericPointSingularity{T} <: PointSingularity
+struct SingularPoint{T} <: PointSingularity
     point   ::  T
 end
 

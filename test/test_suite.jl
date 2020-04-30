@@ -1,8 +1,6 @@
 
 using Test
-using DomainSets
-using HCubature
-using StaticArrays
+using DomainSets, HCubature, StaticArrays
 
 using DomainIntegrals
 
@@ -14,10 +12,10 @@ include("test_gauss.jl")
     test_measures()
 end
 
-@testset "Integrals" begin
-    test_integrals()
-end
-
 @testset "Quadrature rules" begin
     test_gauss()
+end
+
+@testset "Selected integrals" begin
+    test_integrals()
 end

@@ -11,7 +11,8 @@ splitdomain_sing(sing::PointSingularity, domain) = splitdomain_point(point(sing)
 
 splitdomain_point(point, domain::Domain) = (domain,)
 
-function splitdomain_point(x::T, domain::AbstractInterval{T}) where {T}
+function splitdomain_point(x, domain::AbstractInterval)
+    T = promote_type(typeof(x),prectype(domain))
     tol = tolerance(T)
     a, b = extrema(domain)
     if (x > a+tol) && (x < b-tol)
@@ -44,10 +45,11 @@ splitdomain_sing(sing::DiagonalSingularity, domain) =
 splitdomain_diagonal(domain::ProductDomain) = splitdomain_diagonal(domain, elements(domain)...)
 
 function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, domain2::AbstractInterval)
+    T = prectype(domain)
     diff1 = domain1 \ domain2
     diff2 = domain2 \ domain1
     overlap = domain1 ∩ domain2
-    if width(overlap) < 100eps(eltype(domain1))
+    if width(overlap) < 100eps(T)
         # "if isempty(overlap)" is not sufficient, because the overlap may be numerically small
         [domain1 × domain2]
     else
@@ -132,6 +134,8 @@ function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval
     quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
 end
 
+
+
 # Lebesgue measures can pass through unaltered
 quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
     quadrature_d(qs, integrand, domain, measure, sing)
@@ -148,11 +152,6 @@ quadrature_m(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreMeasure{T}, 
 
 quadrature_m(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteMeasure{T}, sing) where {T} =
     quadrature_m(Q_GaussHermite(qs.n), integrand, domain, LebesgueMeasure{T}(), sing)
-
-# function quadrature_m(qs, integrand, domain::AbstractInterval, measure::ChebyshevMeasure, sing)
-#     a, b = extrema(domain)
-#     quadrature(qs, t->integrand(cos(t))*sin(t), acos(a)..acos(b), LegendreMeasure(), sing)
-# end
 
 
 ## Domains
