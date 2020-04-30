@@ -6,7 +6,7 @@ using GaussQuadrature, FastGaussQuadrature, HCubature
 using StaticArrays
 using IntervalSets, DomainSets
 
-import Base: convert
+import Base: convert, checkbounds, length
 
 import DomainSets:
     EmptySpace,

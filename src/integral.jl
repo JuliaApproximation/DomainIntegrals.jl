@@ -124,8 +124,13 @@ fallback_quadrature(qs, integrand, domain, measure, sing) =
 
 
 # For quadgk, we only know how to compute intervals
-apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing) =
-    quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
+function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+    if isempty(domain)
+        zero_result(integrand, prectype(qs))
+    else
+        quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
+    end
+end
 
 # hcubature works for rectangles with the Lebesgue measure
 apply_productquad(::Q_hcubature, integrand, domain, measure::AbstractLebesgueMeasure, sing, domains::AbstractInterval...) =

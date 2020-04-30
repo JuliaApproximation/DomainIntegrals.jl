@@ -9,11 +9,13 @@ export QuadAdaptive,
 
 abstract type QuadratureStrategy end
 
-abstract type AdaptiveStrategy <: QuadratureStrategy end
+abstract type AdaptiveStrategy{T} <: QuadratureStrategy end
+
+prectype(::Type{<:AdaptiveStrategy{T}}) where {T} = prectype(T)
 
 
 "An adaptive quadrature strategy"
-struct QuadAdaptive{T} <: AdaptiveStrategy
+struct QuadAdaptive{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int
@@ -24,7 +26,7 @@ end
 QuadAdaptive() = QuadAdaptive{Float64}()
 
 "Adaptive quadrature using quadgk"
-struct Q_quadgk{T} <: AdaptiveStrategy
+struct Q_quadgk{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int
@@ -37,7 +39,7 @@ Q_quadgk(qs::QuadAdaptive{T}) where {T} = Q_quadgk{T}(qs.atol, qs.rtol, qs.maxev
 
 
 "Adaptive quadrature using hcubature"
-struct Q_hcubature{T} <: AdaptiveStrategy
+struct Q_hcubature{T} <: AdaptiveStrategy{T}
     atol    ::  T
     rtol    ::  T
     maxevals    ::  Int

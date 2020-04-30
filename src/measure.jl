@@ -9,6 +9,7 @@ export support,
     weightfunction,
     points,
     weights,
+    discrete_weight,
     AbstractLebesgueMeasure,
     LebesgueMeasure,
     UnitLebesgueMeasure,
@@ -37,6 +38,7 @@ codomaintype(μ::AbstractMeasure) = codomaintype(typeof(μ))
 codomaintype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
 
 prectype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
+numtype(::Type{<:AbstractMeasure{T}}) where {T} = numtype(T)
 
 "Is the measure normalized?"
 isnormalized(μ::AbstractMeasure) = false
@@ -66,6 +68,8 @@ iscontinuous(μ::Measure) = true
 iscontinuous(μ::DiscreteMeasure) = false
 
 
+## Support for continuous measures
+
 "Return the support of the measure"
 support(μ::Measure{T}) where {T} = FullSpace{T}()
 
@@ -82,13 +86,32 @@ weight1(μ::AbstractMeasure, x) =
 weightfunction(m::AbstractMeasure) = x->weight(m, x)
 unsafe_weightfunction(m::AbstractMeasure) = x->unsafe_weight(m, x)
 
-points(μ::DiscreteMeasure) = μ.x
+## Support for discrete measures
+
+points(μ::DiscreteMeasure) = μ.points
 weights(μ::DiscreteMeasure) = μ.weights
 
+support(μ::DiscreteMeasure) = points(μ)
 
-#################
-# Basic measures
-#################
+function discrete_weight(μ::DiscreteMeasure, i)
+    # Perform a bounds check and invoke unsafe_discrete_weight,
+    # so that concrete measures may implement e.g. an on-the-fly formula for
+    # the weights without bounds checking
+    @boundscheck checkbounds(μ, i)
+    unsafe_discrete_weight(μ, i)
+end
+checkbounds(μ::DiscreteMeasure, i) = checkbounds(points(μ), i)
+
+function unsafe_discrete_weight(μ::DiscreteMeasure, i)
+    @inbounds weights(μ)[i]
+end
+
+isnormalized(μ::DiscreteMeasure) = sum(weights(μ)) ≈ 1
+
+length(μ::DiscreteMeasure) = length(points(μ))
+
+
+## Basic measures
 
 "Supertype of Lebesgue measures"
 abstract type AbstractLebesgueMeasure{T} <: Measure{T} end
@@ -126,7 +149,6 @@ support(m::DomainLebesgueMeasure) = m.domain
 #################
 # Applications
 #################
-
 
 "A point measure"
 struct DiracMeasure{T} <: DiscreteMeasure{T}
@@ -261,5 +283,5 @@ unsafe_weight(μ::GaussianMeasure, x) = 1/(2*convert(prectype(μ), pi))^(length(
 "The Lebesgue measure associated with the given domain"
 lebesguemeasure(domain::UnitInterval{T}) where {T} = UnitLebesgueMeasure{T}()
 lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreMeasure{T}()
-lebesguemeasure(domain::DomainSets.FullSpace{T}) where {T} = LebesgueMeasure{T}()
+lebesguemeasure(domain::FullSpace{T}) where {T} = LebesgueMeasure{T}()
 lebesguemeasure(domain::Domain{T}) where {T} = DomainLebesgueMeasure{T}(domain)

@@ -158,7 +158,7 @@ quadrature_m(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteMeasure{T
 ## Domains
 
 quadrature_d(qs, integrand, domain::EmptySpace, measure, sing) =
-    zero_result(integrand, eltype(domain))
+    zero_result(integrand, prectype(domain))
 
 function nonoverlapping_domains(domain::UnionDomain)
     domains = [element(domain, 1)]
