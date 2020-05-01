@@ -22,7 +22,11 @@ unknown_error(z::Number) = -one(z)
 
 function zero_result(integrand, ::Type{S}) where {S}
     T = returntype(integrand, S)
-    zero(T), zero_error(T)
+    if T == Any
+        zero(S), zero_error(S)
+    else
+        zero(T), zero_error(T)
+    end
 end
 
 tolerance(d::Domain{T}) where {T} = tolerance(T)
@@ -77,6 +81,8 @@ quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}) where {T} =
     quadrature(qs, integrand, domain, LebesgueMeasure{T}())
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}, sing::Singularity) where {T} =
     quadrature(qs, integrand, domain, LebesgueMeasure{T}(), sing)
+quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure, domain::Domain) =
+    quadrature(qs, integrand, domain, measure)
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure) =
     quadrature(qs, integrand, domain, measure, NoSingularity())
 quadrature(qs::FixedRuleInterval{T}, integrand) where {T} =
@@ -86,6 +92,8 @@ quadrature(qs::FixedRuleHalfLine{T}, integrand) where {T} =
 quadrature(qs::FixedRuleRealLine{T}, integrand) where {T} =
     quadrature(qs, integrand, FullSpace{T}())
 
+quadrature(::QuadratureStrategy, arg1, args...) =
+    error("Incorrect type or number of arguments?")
 quadrature(integrand, arg1, args...) =
     quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
 

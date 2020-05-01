@@ -98,7 +98,7 @@ end
 function quadrature_m(qs, integrand, domain, μ::DiscreteMeasure, sing)
     x = points(μ)
     w = weights(μ)
-    I,E = zero_result(integrand, eltype(domain))
+    I,E = zero_result(integrand, promote_type(prectype(domain),eltype(w)))
     for i in 1:length(x)
         if x[i] ∈ domain
             I += w[i]*integrand(x[i])
@@ -127,11 +127,30 @@ function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval
     quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
 end
 
+function quadrature_m(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+    Tpi = convert(T, pi)
+    integrand2 = t -> Tpi*integrand(cos(Tpi*t))
+    a, b = extrema(domain)
+    a < -1.001 && throw(BoundsError(measure, a))
+    b > 1.001 && throw(BoundsError(measure, b))
+    # Set a and b to be within [-1,1] in order to avoid errors with acos below
+    a = max(a, -1)
+    b = min(b, 1)
+    quadrature_d(qs, integrand2, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing)
+end
+
 # apply the cosine map for integrals with the ChebyshevU weight as well
 function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
     Tpi = convert(T, pi)
     integrand2 = t -> Tpi*integrand(cos(Tpi*t))*sin(Tpi*t)^2
     quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
+end
+
+function quadrature_m(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+    Tpi = convert(T, pi)
+    integrand2 = t -> Tpi*integrand(cos(Tpi*t))*sin(Tpi*t)^2
+    a, b = extrema(domain)
+    quadrature_d(qs, integrand2, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing)
 end
 
 
