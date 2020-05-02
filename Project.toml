@@ -1,7 +1,7 @@
 name = "DomainIntegrals"
 uuid = "cc6bae93-f070-4015-88fd-838f9505a86c"
 authors = ["Daan Huybrechs <daan.huybrechs@cs.kuleuven.be>"]
-version = "0.1.2"
+version = "0.1.0"
 
 [deps]
 DomainSets = "5b8099bc-c8ec-5219-889f-1d9e522a28bf"
@@ -12,6 +12,15 @@ IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+DomainSets = "0.3.0"
+FastGaussQuadrature = "0.4.2"
+GaussQuadrature = "0.5.4"
+HCubature = "1.4.0"
+IntervalSets = "0.5.0"
+QuadGK = "2.3.1"
+StaticArrays = "0.11,0.12"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
