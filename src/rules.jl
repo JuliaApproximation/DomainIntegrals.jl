@@ -1,16 +1,27 @@
 
 using DomainSets: element, elements, numelements, ×
 
+"""
+Recombine the outcome of several invocations of `I,E = quadrature(...)` into
+a single `I,E` tuple, by summing the integral values and error estimates.
+"""
 recombine_outcome(IEs) = sum(IE[1] for IE in IEs), sum(IE[2] for IE in IEs)
 
 ## Singularities
 
+"""
+Split the domain into a list of domains, such that any singularity lies
+on the boundary of one or more of the constituting parts.
+
+Care is taken to avoid a singularity in the interior due to roundoff errors.
+"""
 splitdomain_sing(sing, domain) = (domain,)
 
 splitdomain_sing(sing::PointSingularity, domain) = splitdomain_point(point(sing), domain)
 
 splitdomain_point(point, domain::Domain) = (domain,)
 
+"Split the domain according to a singularity at the point `x`."
 function splitdomain_point(x, domain::AbstractInterval)
     T = promote_type(typeof(x),prectype(domain))
     tol = tolerance(T)
@@ -178,8 +189,10 @@ quadrature_m(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteMeasure{T
 quadrature_d(qs, integrand, domain::EmptySpace, measure, sing) =
     zero_result(integrand, prectype(domain))
 
-function nonoverlapping_domains(domain::UnionDomain)
-    domains = [element(domain, 1)]
+"Convert a union of domains into a vector of domains without overlap"
+function nonoverlapping_domains(domain::UnionDomain{T}) where {T}
+    domains = Vector{Domain{T}}()
+    push!(domains, element(domain, 1))
     for i in 2:numelements(domain)
         d = element(domain, i)
         for j=1:i-1
