@@ -192,6 +192,9 @@ similar(μ::JacobiMeasure, ::Type{T}) where {T <: Real} = JacobiMeasure{T}(μ.α
 support(μ::JacobiMeasure{T}) where {T} = ChebyshevInterval{T}()
 unsafe_weight(μ::JacobiMeasure, x) = (1+x)^μ.α * (1-x)^μ.β
 
+jacobi_α(μ::JacobiMeasure) = μ.α
+jacobi_β(μ::JacobiMeasure) = μ.β
+
 
 """
 The `Chebyshev` or `ChebyshevT` measure is the measure on `[-1,1]` with the
@@ -229,12 +232,12 @@ convert(::Type{JacobiMeasure}, μ::ChebyshevUMeasure{T}) where {T} =
     JacobiMeasure{T}(one(T)/2, one(T)/2)
 
 function convert(::Type{ChebyshevTMeasure}, μ::JacobiMeasure{T}) where {T}
-    (μ.α ≈ -one(T)/2 && μ.β ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTMeasure, μ))
+    (jacobi_α(μ) ≈ -one(T)/2 && jacobi_β(μ) ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTMeasure, μ))
     ChebyshevTMeasure{T}()
 end
 
 function convert(::Type{ChebyshevUMeasure}, μ::JacobiMeasure{T}) where {T}
-    (μ.α ≈ one(T)/2 && μ.β ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUMeasure, μ))
+    (jacobi_α(μ) ≈ one(T)/2 && jacobi_β(μ) ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUMeasure, μ))
     ChebyshevUMeasure{T}()
 end
 
@@ -242,6 +245,14 @@ function convert(::Type{LegendreMeasure}, μ::JacobiMeasure{T}) where {T}
     (μ.α ≈ 0 && μ.β ≈ 0) || throw(InexactError(:convert, LegendreMeasure, μ))
     LegendreMeasure{T}()
 end
+
+jacobi_α(μ::LegendreMeasure{T}) where {T} = zero(T)
+jacobi_β(μ::LegendreMeasure{T}) where {T} = zero(T)
+jacobi_α(μ::ChebyshevTMeasure{T}) where {T} = -one(T)/2
+jacobi_β(μ::ChebyshevTMeasure{T}) where {T} = -one(T)/2
+jacobi_α(μ::ChebyshevUMeasure{T}) where {T} = one(T)/2
+jacobi_β(μ::ChebyshevUMeasure{T}) where {T} = one(T)/2
+
 
 
 "The generalised Laguerre measure on the halfline `[0,∞)`."
@@ -258,6 +269,8 @@ similar(μ::LaguerreMeasure, ::Type{T}) where {T <: Real} = LaguerreMeasure{T}(�
 support(μ::LaguerreMeasure{T}) where {T} = HalfLine{T}()
 isnormalized(m::LaguerreMeasure) = m.α == 0
 unsafe_weight(μ::LaguerreMeasure, x) = exp(-x) * x^μ.α
+
+laguerre_α(μ::LaguerreMeasure) = μ.α
 
 
 "The Hermite measure with weight exp(-x^2) on the real line."
