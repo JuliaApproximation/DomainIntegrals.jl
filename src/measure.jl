@@ -78,8 +78,22 @@ function weight(μ::AbstractMeasure{T}, x::S) where {S,T}
     U = promote_type(S,T)
     weight(convert(AbstractMeasure{U}, μ), convert(U, x))
 end
-weight(μ::AbstractMeasure{T}, x::T) where {T} = weight1(μ, x)
 
+# If the argument x is a vector: ensure the element types match
+function weight(μ::AbstractMeasure{Vector{S}}, x::AbstractVector{T}) where {S,T}
+    U = promote_type(S,T)
+    weight(convert(Measure{Vector{U}}, μ), convert(AbstractVector{U}, x))
+end
+# If the measure expects SVector, convert x to SVector (we can assume matching eltype)
+weight(μ::AbstractMeasure{SVector{N,S}}, x::AbstractVector{T}) where {N,S,T} =
+    weight(μ, convert(SVector{N,S}, x))
+
+# Accept matching types, and matching vectors
+weight(μ::AbstractMeasure{T}, x::T) where {T} = weight1(μ, x)
+weight(μ::AbstractMeasure{Vector{T}}, x::AbstractVector{T}) where {T} = weight1(μ, x)
+weight(μ::AbstractMeasure{SVector{N,T}}, x::SVector{N,T}) where {N,T} = weight1(μ, x)
+
+# Check for support, then invoke unsafe_weight
 weight1(μ::AbstractMeasure, x) =
     x ∈ support(μ) ? unsafe_weight(μ, x) : zero(codomaintype(μ))
 
@@ -117,6 +131,9 @@ length(μ::DiscreteMeasure) = length(points(μ))
 abstract type AbstractLebesgueMeasure{T} <: Measure{T} end
 
 unsafe_weight(μ::AbstractLebesgueMeasure, x) = one(codomaintype(μ))
+
+islebesguemeasure(m::AbstractMeasure) = false
+islebesguemeasure(m::AbstractLebesgueMeasure) = true
 
 "The Lebesgue measure on the space `FullSpace{T}`."
 struct LebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
@@ -206,9 +223,11 @@ ChebyshevTMeasure() = ChebyshevTMeasure{Float64}()
 
 const ChebyshevMeasure = ChebyshevTMeasure
 
+chebyshev_weight_firstkind(x) = 1/sqrt(1-x^2)
+
 similar(μ::ChebyshevTMeasure, ::Type{T}) where {T <: Real} = ChebyshevTMeasure{T}()
 support(μ::ChebyshevTMeasure{T}) where {T} = ChebyshevInterval{T}()
-unsafe_weight(μ::ChebyshevTMeasure, x) = 1/sqrt(1-x^2)
+unsafe_weight(μ::ChebyshevTMeasure, x) = chebyshev_weight_firstkind(x)
 
 
 """
@@ -219,9 +238,11 @@ struct ChebyshevUMeasure{T} <: Measure{T}
 end
 ChebyshevUMeasure() = ChebyshevUMeasure{Float64}()
 
+chebyshev_weight_secondkind(x) = sqrt(1-x^2)
+
 similar(μ::ChebyshevUMeasure, ::Type{T}) where {T <: Real} = ChebyshevUMeasure{T}()
 support(μ::ChebyshevUMeasure{T}) where {T} = ChebyshevInterval{T}()
-unsafe_weight(μ::ChebyshevUMeasure, x) = sqrt(1-x^2)
+unsafe_weight(μ::ChebyshevUMeasure, x) = chebyshev_weight_secondkind(x)
 
 
 convert(::Type{JacobiMeasure}, μ::LegendreMeasure{T}) where {T} =
@@ -278,8 +299,10 @@ struct HermiteMeasure{T} <: Measure{T}
 end
 HermiteMeasure() = HermiteMeasure{Float64}()
 
+hermite_weight(x) = exp(-x^2)
+
 similar(μ::HermiteMeasure, ::Type{T}) where {T <: Real} = HermiteMeasure{T}()
-unsafe_weight(μ::HermiteMeasure, x) = exp(-x^2)
+unsafe_weight(μ::HermiteMeasure, x) = hermite_weight(x)
 
 
 "The Gaussian measure with weight exp(-|x|^2/2)."

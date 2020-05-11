@@ -118,57 +118,85 @@ function quadrature_m(qs, integrand, domain, μ::DiscreteMeasure, sing)
     I, E
 end
 
-# We replace all measures by the LebesgueMeasure on the space
+# Lebesgue measures can pass through unaltered
+# Other types of measures we "process" first, and then we continue with quadrature_d
+quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
+    quadrature_d(qs, integrand, domain, measure, sing)
+
 function quadrature_m(qs, integrand, domain, measure::Measure{T}, sing) where {T}
-    integrand2 = t -> integrand(t) * unsafe_weight(measure, t)
-    quadrature_d(qs, integrand2, domain, LebesgueMeasure{T}(), sing)
+    prefactor, map, domain2, measure2, sing2 = process_measure(qs, domain, measure, sing)
+    integrand2 = transform_integrand(integrand, prefactor, map)
+    quadrature_d(qs, integrand2, domain2, measure2, sing2)
+end
+
+struct Identity end
+(::Identity)(x) = x
+const id = Identity()
+
+transform_integrand(integrand, prefactor::Identity, map::Identity) = integrand
+transform_integrand(integrand, prefactor::Identity, map) = t -> integrand(map(t))
+transform_integrand(integrand, prefactor, map::Identity) = t -> prefactor(t) * integrand(t)
+transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(map(t))
+
+# By default we replace all measures by the LebesgueMeasure on the space
+process_measure(qs, domain, measure::Measure, sing) =
+    process_measure_default(qs, domain, measure, sing)
+
+function process_measure_default(qs, domain, measure::Measure{T}, sing) where {T}
+    prefactor = t -> unsafe_weight(measure, t)
+    prefactor, id, domain, LebesgueMeasure{T}(), sing
 end
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
-function quadrature_m(qs::AdaptiveStrategy, integrand, domain::FullSpace{T}, measure::HermiteMeasure{T}, sing) where {T}
-    integrand2 = t -> integrand(t) * unsafe_weight(measure, t)
-    U = sqrt(-log(eps(Float64)))
-    quadrature_d(qs, integrand2, -U..U, LebesgueMeasure{T}(), sing)
+function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteMeasure{T}, sing) where {T}
+    U = sqrt(-log(eps(T)))
+    hermite_weight, id, -U..U, LebesgueMeasure{T}(), sing
 end
 
 # apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
-function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+    # Transformation is: f(t) -> pi*f(cos(pi*t))
     Tpi = convert(T, pi)
-    integrand2 = t -> Tpi*integrand(cos(Tpi*t))
-    quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
+    prefactor = t -> Tpi
+    map = t -> cos(Tpi*t)
+    prefactor, map, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing
 end
 
-function quadrature_m(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+# same as above, but on a subinterval
+function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
     Tpi = convert(T, pi)
-    integrand2 = t -> Tpi*integrand(cos(Tpi*t))
+    prefactor = t -> Tpi
+    map = t -> cos(Tpi*t)
     a, b = extrema(domain)
     a < -1.001 && throw(BoundsError(measure, a))
     b > 1.001 && throw(BoundsError(measure, b))
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    quadrature_d(qs, integrand2, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing)
+    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing
 end
 
 # apply the cosine map for integrals with the ChebyshevU weight as well
-function quadrature_m(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
     Tpi = convert(T, pi)
-    integrand2 = t -> Tpi*integrand(cos(Tpi*t))*sin(Tpi*t)^2
-    quadrature_d(qs, integrand2, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing)
+    prefactor = t -> Tpi * sin(Tpi*t)^2
+    map = t -> cos(Tpi*t)
+    prefactor, map, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing
 end
 
-function quadrature_m(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
     Tpi = convert(T, pi)
-    integrand2 = t -> Tpi*integrand(cos(Tpi*t))*sin(Tpi*t)^2
+    prefactor = t -> Tpi * sin(Tpi*t)^2
+    map = t -> cos(Tpi*t)
     a, b = extrema(domain)
-    quadrature_d(qs, integrand2, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing)
+    a < -1.001 && throw(BoundsError(measure, a))
+    b > 1.001 && throw(BoundsError(measure, b))
+    # Set a and b to be within [-1,1] in order to avoid errors with acos below
+    a = max(a, -1)
+    b = min(b, 1)
+    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing
 end
 
-
-
-# Lebesgue measures can pass through unaltered
-quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
-    quadrature_d(qs, integrand, domain, measure, sing)
 
 # The "best" rule for certain measures becomes a Gauss rule
 quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::LegendreMeasure, sing) =

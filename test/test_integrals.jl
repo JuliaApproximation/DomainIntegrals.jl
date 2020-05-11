@@ -4,17 +4,7 @@ using DomainSets: ×
 "Does `z` agree with `val` up to the given `threshold`?"
 isaccurate(z, val, threshold = 1e-5) = abs(z-val) < threshold
 
-function test_integrals()
-    z1 = sin(1.0)
-    @test abs(integral(cos, 0..1.0) - z1) < 1e-8
-    I, E = quadrature(cos, 0..1.0)
-    @test abs(I-z1) < 1e-8
-    @test E < 1e-8
-
-    f2 = x -> exp(x[1]+x[2])
-    z2 = hcubature(f2, (0,0), (1,1))[1]
-    @test abs(integral(f2, (0..1)^2) - z2) < 1e-6
-
+function test_readme_examples()
     # Examples of README.md
     threshold = 1e-5
     @test isaccurate(integral(cos, 0..1.0), 0.8414709848078965)
@@ -28,4 +18,21 @@ function test_integrals()
     @test isaccurate(quadrature(QuadAdaptive(atol=1e-3, rtol = 1e-3), t->cos(t^2), 0..10)[1], 0.6011251848111901, 1e-3)
     @test isaccurate(integral(Q_GaussLaguerre(10), cos), 0.5000005097999486)
     @test isaccurate(integral(t -> cos(t)*exp(-t), HalfLine()), 0.5)
+end
+
+function test_some_integrals()
+    z1 = sin(1.0)
+    @test abs(integral(cos, 0..1.0) - z1) < 1e-8
+    I, E = quadrature(cos, 0..1.0)
+    @test abs(I-z1) < 1e-8
+    @test E < 1e-8
+
+    f2 = x -> exp(x[1]+x[2])
+    z2 = hcubature(f2, (0,0), (1,1))[1]
+    @test abs(integral(f2, (0..1)^2) - z2) < 1e-6
+end
+
+function test_integrals()
+    test_some_integrals()
+    test_readme_examples()
 end

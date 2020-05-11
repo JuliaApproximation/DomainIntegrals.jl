@@ -148,8 +148,13 @@ function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::
 end
 
 # hcubature works for rectangles with the Lebesgue measure
-apply_productquad(::Q_hcubature, integrand, domain, measure::AbstractLebesgueMeasure, sing, domains::AbstractInterval...) =
-    apply_hcubature(integrand, domains...)
+function apply_productquad(::Q_hcubature, integrand, domain, measure, sing, domains::AbstractInterval...)
+    if islebesguemeasure(measure)
+        apply_hcubature(integrand, domains...)
+    else
+        error("HCubature is invoked, but not with a Lebesgue measure: $(measure)")
+    end
+end
 
 
 function apply_hcubature(integrand, domains::AbstractInterval...)
