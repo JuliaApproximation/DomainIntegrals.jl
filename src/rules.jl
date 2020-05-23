@@ -262,6 +262,11 @@ end
 
 const ExpandableDomain = Union{UnionDomain,ProductDomain}
 
+function quadrature_d(qs, integrand, domain::MappedDomain, measure, sing)
+    m = inverse_map(domain)
+    quadrature_d(qs, t->integrand(m(t))/jacdet(m,t), superdomain(domain), measure, sing)
+end
+
 function quadrature_d(qs, integrand, domain::ExpandableDomain, measure, sing)
     domains = expand_domain(domain)
     if length(domains) > 1
