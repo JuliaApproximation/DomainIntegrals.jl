@@ -19,7 +19,19 @@ splitdomain_sing(sing, domain) = (domain,)
 
 splitdomain_sing(sing::PointSingularity, domain) = splitdomain_point(point(sing), domain)
 
-splitdomain_point(point, domain::Domain) = (domain,)
+function splitdomain_point(point, domain::MappedDomain)
+    m = inverse_map(domain)
+    map_domain.(Ref(m), splitdomain_point(m(point), superdomain(domain)))
+end
+
+function splitdomain_point(point, domain::Domain)
+    if point ∈ domain
+        @warn("Don't know how to split domain $(domain) at point $(point)")
+        (domain,)
+    else
+        (domain,)
+    end
+end
 
 "Split the domain according to a singularity at the point `x`."
 function splitdomain_point(x, domain::AbstractInterval)
@@ -35,9 +47,9 @@ function splitdomain_point(x, domain::AbstractInterval)
     else
         # x is close to a or b
         if abs(x-a) <= tol
-            (max(a,x)..b,)
+            (max(a,x)+tol..b,)
         else
-            (a..min(b,x),)
+            (a..min(b,x)-tol,)
         end
     end
 end
@@ -138,10 +150,10 @@ transform_integrand(integrand, prefactor::Identity, map) = t -> integrand(map(t)
 transform_integrand(integrand, prefactor, map::Identity) = t -> prefactor(t) * integrand(t)
 transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(map(t))
 
-# By default we replace all measures by the LebesgueMeasure on the space
 process_measure(qs, domain, measure::Measure, sing) =
     process_measure_default(qs, domain, measure, sing)
 
+# By default we replace all measures by the LebesgueMeasure on the space
 function process_measure_default(qs, domain, measure::Measure{T}, sing) where {T}
     prefactor = t -> unsafe_weight(measure, t)
     prefactor, id, domain, LebesgueMeasure{T}(), sing
@@ -199,11 +211,11 @@ end
 
 
 # The "best" rule for certain measures becomes a Gauss rule
-quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::LegendreMeasure, sing) =
-    quadrature_m(Q_GaussLegendre(qs.n), integrand, domain, μ, sing)
+quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval{T}, μ::LegendreMeasure, sing) where {T} =
+    quadrature_m(Q_GaussLegendre(T, qs.n), integrand, domain, μ, sing)
 
-quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::JacobiMeasure, sing) =
-    quadrature_m(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreMeasure(), sing)
+quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::JacobiMeasure{T}, sing) where {T} =
+    quadrature_m(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreMeasure{T}(), sing)
 
 quadrature_m(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreMeasure{T}, sing) where {T} =
     quadrature_m(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, LebesgueMeasure{T}(), sing)

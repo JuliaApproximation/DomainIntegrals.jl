@@ -85,11 +85,11 @@ quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure, domain::
     quadrature(qs, integrand, domain, measure)
 quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure) =
     quadrature(qs, integrand, domain, measure, NoSingularity())
-quadrature(qs::FixedRuleInterval{T}, integrand) where {T} =
+quadrature(qs::ChebyshevIntervalRule{T}, integrand) where {T} =
     quadrature(qs, integrand, ChebyshevInterval{T}())
-quadrature(qs::FixedRuleHalfLine{T}, integrand) where {T} =
+quadrature(qs::HalfLineRule{T}, integrand) where {T} =
     quadrature(qs, integrand, HalfLine{T}())
-quadrature(qs::FixedRuleRealLine{T}, integrand) where {T} =
+quadrature(qs::RealLineRule{T}, integrand) where {T} =
     quadrature(qs, integrand, FullSpace{T}())
 
 quadrature(::QuadratureStrategy, arg1, args...) =
@@ -163,8 +163,8 @@ function apply_hcubature(integrand, domains::AbstractInterval...)
     hcubature(integrand, a, b, maxevals = 10000)
 end
 
-function apply_quad(qs::FixedRuleInterval, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
-    # TODO: use Jacobians for this
+# Given a rule on [-1,1] and a different interval, we map the rule
+function apply_quad(qs::ChebyshevIntervalRule, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = (b-a)/2
@@ -174,14 +174,46 @@ function apply_quad(qs::FixedRuleInterval, integrand, domain::AbstractInterval, 
     z, unknown_error(z)
 end
 
-function apply_quad(qs::FixedRuleHalfLine, integrand, domain::HalfLine, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::UnitIntervalRule, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+    a = leftendpoint(domain)
+    b = rightendpoint(domain)
+    D = b-a
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(a + x[i]*D)*D for i in 1:length(x))
+    z, unknown_error(z)
+end
+
+function apply_quad(qs::IntervalRule, integrand, interval::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+    a, b = extrema(interval)
+    A, B = extrema(domain(qs))
+    m = interval_map(A, B, a, b)
+    J = (b-a)/(B-A)
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(m(x[i]))*J for i in 1:length(x))
+    z, unknown_error(z)
+end
+
+# Make sure that a half line rule is applied to a half line integral
+function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::AbstractLebesgueMeasure, sing)
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
     z, unknown_error(z)
 end
 
-function apply_quad(qs::FixedRuleRealLine, integrand, domain::FullSpace, measure::AbstractLebesgueMeasure, sing)
+# Make sure that a real line rule is applied to a real line integral
+function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::AbstractLebesgueMeasure, sing)
+    x = points(qs)
+    w = weights(qs)
+    z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
+    z, unknown_error(z)
+end
+
+# Any other quadrature rule, we just apply it
+function apply_quad(qs::GenericDomainRule, integrand, domain, measure, sing)
+    @assert domain(qs) == domain
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
