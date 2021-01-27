@@ -20,8 +20,8 @@ GaussQuadrature = "0.5.4"
 HCubature = "1.4.0"
 IntervalSets = "0.5.0"
 QuadGK = "2.3.1"
-StaticArrays = "0.11,0.12"
-julia = "1.3"
+StaticArrays = "0.11,0.12,1.0"
+julia = "1.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
