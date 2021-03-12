@@ -1,6 +1,6 @@
 # DomainIntegrals.jl
 
-[![Build Status](https://travis-ci.org/JuliaApproximation/DomainIntegrals.jl.svg?branch=master)](https://travis-ci.org/JuliaApproximation/DomainIntegral.jl)
+[![Build Status](https://travis-ci.org/JuliaApproximation/DomainIntegrals.jl.svg?branch=master)](https://travis-ci.org/JuliaApproximation/DomainIntegrals.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/gc75y13g0kerxll8?svg=true)](https://ci.appveyor.com/project/dlfivefifty/domainintegrals-jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaApproximation/DomainIntegrals.jl/badge.svg)](https://coveralls.io/github/JuliaApproximation/DomainIntegrals.jl)
 
