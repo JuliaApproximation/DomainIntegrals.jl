@@ -15,14 +15,14 @@ abstract type AdaptiveStrategy{T} <: QuadratureStrategy end
 
 prectype(::Type{<:AdaptiveStrategy{T}}) where {T} = prectype(T)
 
-def_atol() = def_atol(Float64)
-def_rtol() = def_rtol(Float64)
+default_atol() = default_atol(Float64)
+default_rtol() = default_rtol(Float64)
 
-def_atol(::Type{T}) where {T} = zero(T)
-def_rtol(::Type{T}) where {T} = sqrt(eps(T))
-def_rtol(x) = def_rtol(typeof(x))
+default_atol(::Type{T}) where {T} = zero(T)
+default_rtol(::Type{T}) where {T} = sqrt(eps(T))
+default_rtol(x) = default_rtol(typeof(x))
 
-def_maxevals() = 10^4
+default_maxevals() = 10^4
 
 "An adaptive quadrature strategy"
 struct QuadAdaptive{T} <: AdaptiveStrategy{T}
@@ -31,12 +31,12 @@ struct QuadAdaptive{T} <: AdaptiveStrategy{T}
     maxevals    ::  Int
 end
 
-QuadAdaptive(; atol = def_atol(), rtol = def_rtol(atol), maxevals = def_maxevals()) = QuadAdaptive(atol, rtol, maxevals)
+QuadAdaptive(; atol = default_atol(), rtol = default_rtol(atol), maxevals = default_maxevals()) = QuadAdaptive(atol, rtol, maxevals)
 QuadAdaptive(atol, rtol, maxevals) = QuadAdaptive(promote(atol,rtol)..., maxevals)
 QuadAdaptive(atol::T, rtol::T, maxevals) where {T} = QuadAdaptive{T}(atol, rtol, maxevals)
 
-QuadAdaptive{T}(atol = def_atol(T), rtol = def_rtol(atol)) where {T} =
-    QuadAdaptive{T}(atol, rtol, def_maxevals())
+QuadAdaptive{T}(atol = default_atol(T), rtol = default_rtol(atol)) where {T} =
+    QuadAdaptive{T}(atol, rtol, default_maxevals())
 
 "Adaptive quadrature using quadgk"
 struct Q_quadgk{T} <: AdaptiveStrategy{T}
@@ -45,12 +45,12 @@ struct Q_quadgk{T} <: AdaptiveStrategy{T}
     maxevals    ::  Int
 end
 
-Q_quadgk(; atol = def_atol(), rtol = def_rtol(atol), maxevals = def_maxevals()) = Q_quadgk(atol, rtol, maxevals)
+Q_quadgk(; atol = default_atol(), rtol = default_rtol(atol), maxevals = default_maxevals()) = Q_quadgk(atol, rtol, maxevals)
 Q_quadgk(atol, rtol, maxevals) = Q_quadgk(promote(atol,rtol)..., maxevals)
 Q_quadgk(atol::T, rtol::T, maxevals) where {T} = Q_quadgk{T}(atol, rtol, maxevals)
 
-Q_quadgk{T}(atol = def_atol(T), rtol = def_rtol(atol)) where {T} =
-    Q_quadgk{T}(atol, rtol, def_maxevals())
+Q_quadgk{T}(atol = default_atol(T), rtol = default_rtol(atol)) where {T} =
+    Q_quadgk{T}(atol, rtol, default_maxevals())
 
 Q_quadgk(qs::QuadAdaptive{T}) where {T} = Q_quadgk{T}(qs.atol, qs.rtol, qs.maxevals)
 
@@ -62,12 +62,13 @@ struct Q_hcubature{T} <: AdaptiveStrategy{T}
     maxevals    ::  Int
 end
 
-Q_hcubature(; atol = 0.0, rtol = sqrt(eps(atol)), maxevals = 10^4) = Q_hcubature(atol, rtol, maxevals)
+Q_hcubature(; atol = default_atol(), rtol = default_rtol(atol), maxevals = default_maxevals()) =
+    Q_hcubature(atol, rtol, maxevals)
 Q_hcubature(atol, rtol, maxevals) = Q_hcubature(promote(atol,rtol)..., maxevals)
 Q_hcubature(atol::T, rtol::T, maxevals) where {T} = Q_hcubature{T}(atol, rtol, maxevals)
 
-Q_hcubature{T}(atol = def_atol(T), rtol = def_rtol(atol)) where {T} =
-    Q_hcubature{T}(atol, rtol, def_maxevals())
+Q_hcubature{T}(atol = default_atol(T), rtol = default_rtol(atol)) where {T} =
+    Q_hcubature{T}(atol, rtol, default_maxevals())
 
 Q_hcubature(qs::QuadAdaptive{T}) where {T} = Q_hcubature{T}(qs.atol, qs.rtol, qs.maxevals)
 
