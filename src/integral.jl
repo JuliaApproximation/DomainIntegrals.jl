@@ -147,20 +147,18 @@ function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::
     end
 end
 
-# hcubature works for rectangles with the Lebesgue measure
-function apply_productquad(::Q_hcubature, integrand, domain, measure, sing, domains::AbstractInterval...)
+function apply_productquad(qs::Q_hcubature, integrand, domain, measure, sing, domains::AbstractInterval...)
     if islebesguemeasure(measure)
-        apply_hcubature(integrand, domains...)
+        apply_hcubature(qs,integrand, domains...)
     else
         error("HCubature is invoked, but not with a Lebesgue measure: $(measure)")
     end
 end
 
-
-function apply_hcubature(integrand, domains::AbstractInterval...)
+function apply_hcubature(qs::Q_hcubature,integrand, domains::AbstractInterval...)
     a = map(leftendpoint, domains)
     b = map(rightendpoint, domains)
-    hcubature(integrand, a, b, maxevals = 10000)
+    hcubature(integrand, a, b; rtol=qs.rtol,atol=qs.atol, maxevals = qs.maxevals)
 end
 
 # Given a rule on [-1,1] and a different interval, we map the rule
