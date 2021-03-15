@@ -123,7 +123,7 @@ function integrate_measure(qs, integrand, domain, δ::DiracWeight, prop)
 end
 
 function integrate_measure(qs, integrand, domain, μ::DiscreteWeight, prop)
-    I = sum(w*integrand(x) for w in weights(μ), x in points(μ))
+    I = sum(w*integrand(x) for (w,x) in zip(weights(μ), points(μ)))
     I, zero_error(I)
 end
 
@@ -150,16 +150,16 @@ transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(m
 process_measure(qs, domain, measure::Measure, prop) =
     process_measure_default(qs, domain, measure, prop)
 
-# By default we replace all measures by the LebesgueSpace on the space
+# By default we replace all measures by the Lebesgue on the space
 function process_measure_default(qs, domain, measure::Measure{T}, prop) where {T}
     prefactor = t -> unsafe_weightfun(measure, t)
-    prefactor, id, domain, LebesgueSpace{T}(), prop
+    prefactor, id, domain, Lebesgue{T}(), prop
 end
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
 function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteWeight{T}, prop) where {T}
     U = sqrt(-log(eps(T)))
-    hermite_weight, id, -U..U, LebesgueSpace{T}(), prop
+    hermite_weight, id, -U..U, Lebesgue{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
@@ -182,7 +182,7 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueSpace{T}(), prop
+    prefactor, map, acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevU weight as well
@@ -203,7 +203,7 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueSpace{T}(), prop
+    prefactor, map, acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
 end
 
 
@@ -215,10 +215,10 @@ integrate_measure(qs::BestRule, integrand, domain::ChebyshevInterval, μ::Jacobi
     integrate_measure(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreWeight{T}(), prop)
 
 integrate_measure(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreWeight{T}, prop) where {T} =
-    integrate_measure(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, LebesgueSpace{T}(), prop)
+    integrate_measure(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, Lebesgue{T}(), prop)
 
 integrate_measure(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteWeight{T}, prop) where {T} =
-    integrate_measure(Q_GaussHermite(qs.n), integrand, domain, LebesgueSpace{T}(), prop)
+    integrate_measure(Q_GaussHermite(qs.n), integrand, domain, Lebesgue{T}(), prop)
 
 
 ###########
@@ -290,7 +290,7 @@ function integrate_domain(qs, integrand, domain::MappedDomain, measure, prop)
     integrate_domain(qs, t->integrand(m(t))/jacdet(m,t), superdomain(domain), measure, prop)
 end
 
-function integrate_domain(qs, integrand, domain::LowerRightTriangle{T}, measure::LebesgueSpace, prop) where {T}
+function integrate_domain(qs, integrand, domain::LowerRightTriangle{T}, measure::Lebesgue, prop) where {T}
     # Restriction to Lebesgue measure because we would have to map the measure too
     # TODO with a more general framework for change-of-variables in integrals
     # For now, we hardcode the change of variables and we use Duffy's trick.
@@ -304,7 +304,7 @@ function integrate_domain(qs, integrand, domain::LowerRightTriangle{T}, measure:
         square, measure, NoProperty())
 end
 
-function integrate_domain(qs, integrand, domain::UpperRightTriangle{T}, measure::LebesgueSpace, prop) where {T}
+function integrate_domain(qs, integrand, domain::UpperRightTriangle{T}, measure::Lebesgue, prop) where {T}
     a = domain.a
     b = domain.b
     # For x from a to b, and y from x to b, we set y = b-(b-x)*u, where u goes from 0 to 1. We then have dy = (b-x)du.

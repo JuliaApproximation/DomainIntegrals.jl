@@ -1,5 +1,8 @@
 
-export support,
+export Measure,
+    Weight,
+    DiscreteWeight,
+    support,
     domaintype,
     codomaintype,
     isdiscrete,
@@ -44,7 +47,7 @@ abstract type Weight{T} <: Measure{T} end
 A `DiscreteWeight` is a measure defined in terms of a discrete set of points
 and an associated set of weights.
 
-The measure implements the `points` and `weights` functions. The support of
+The measure implements the `points` and `weights` functions. The `support` of
 a discrete measure may be a continuous domain that includes all of the points.
 """
 abstract type DiscreteWeight{T} <: Measure{T} end
@@ -60,6 +63,9 @@ iscontinuous(μ::Weight) = true
 iscontinuous(μ::DiscreteWeight) = false
 # Like above, no default
 
+"Return the support of the measure"
+support(μ::Measure{T}) where {T} = FullSpace{T}()
+
 
 
 ###############################
@@ -70,11 +76,8 @@ iscontinuous(μ::DiscreteWeight) = false
 # We define the functionality at the level of `Measure`, since not
 # all continuous measures are of type `Weight`.
 # This implementation is typically safe, as invoking these functions on a
-# discrete measur is likely to result in an error (because it does not implement
+# discrete measure is likely to result in an error (because it does not implement
 # a weight function).
-
-"Return the support of the continuous measure"
-support(μ::Measure{T}) where {T} = FullSpace{T}()
 
 "Evaluate the weight function associated with the measure."
 function weightfun(μ::Measure{T}, x::S) where {S,T}
@@ -114,13 +117,18 @@ unsafe_weightfunction(μ::Measure) = x->unsafe_weightfun(μ, x)
 # The main interface: return the points and weights of the discrete measure
 points(μ::DiscreteWeight) = μ.points
 weights(μ::DiscreteWeight) = μ.weights
-support(μ::DiscreteWeight) = μ.domain
 
 length(μ::DiscreteWeight) = length(points(μ))
 size(μ::DiscreteWeight) = size(points(μ))
 
-isnormalized(μ::DiscreteWeight) = sum(weights(μ)) ≈ 1
+isnormalized(μ::DiscreteWeight) = _isnormalized(μ, points(μ), weights(μ))
+_isnormalized(μ, points, weights) = sum(weights(μ)) ≈ 1
 
+"Does the discrete measure have equal weights?"
+isuniform(μ::DiscreteWeight) = _isuniform(μ, points(μ), weights(μ))
+_isuniform(μ, points, weights) = allequal(weights)
+
+allequal(A) = all(y -> y == A[1], A)
 
 # Discrete weights are equal if their points and weights are equal elementwise
 Base.:(==)(μ1::DiscreteWeight, μ2::DiscreteWeight) =
@@ -143,14 +151,14 @@ function unsafe_weight(μ::DiscreteWeight, i)
 end
 
 
+
 "A generic discrete weight that stores points and weights."
-struct GenericDiscreteWeight{T,P,W,D} <: DiscreteWeight{T}
+struct GenericDiscreteWeight{T,P,W} <: DiscreteWeight{T}
     points  ::  P
     weights ::  W
-    domain  ::  D
 end
 
-GenericDiscreteWeight(points, weights,domain) =
-    GenericDiscreteWeight{eltype(weights)}(points, weights,domain)
-GenericDiscreteWeight{T}(points::P, weights::W,domain::D) where {T,P,W,D} =
-    GenericDiscreteWeight{T,P,W,D}(points, weights, domain)
+GenericDiscreteWeight(points, weights) =
+    GenericDiscreteWeight{eltype(points)}(points, weights)
+GenericDiscreteWeight{T}(points::P, weights::W) where {T,P,W} =
+    GenericDiscreteWeight{T,P,W}(points, weights)

@@ -1,6 +1,6 @@
 
 function test_measures()
-    m1 = LebesgueSpace()
+    m1 = Lebesgue()
     @test !isdiscrete(m1)
     @test iscontinuous(m1)
     @test !isnormalized(m1)

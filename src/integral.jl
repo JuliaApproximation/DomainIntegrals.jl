@@ -57,12 +57,12 @@ _domain(μ::Measure) = support(μ)
 
 # associate a measure with a domain
 # we try to avoid memory allocations, hence LebesgeeSpace{T} is the default
-_measure(domain::Domain{T}) where {T} = LebesgueSpace{T}()
+_measure(domain::Domain{T}) where {T} = Lebesgue{T}()
 # these cases have a known allocation-free lebesgue measure
 _measure(domain::ChebyshevInterval) = lebesguemeasure(domain)
 _measure(domain::UnitInterval) = lebesguemeasure(domain)
 # sometimes the T of an interval is an integer (e.g. in 0..1)
-_measure(domain::AbstractInterval{T}) where {T} = LebesgueSpace{float(T)}()
+_measure(domain::AbstractInterval{T}) where {T} = Lebesgue{float(T)}()
 
 
 # Process the arguments until there is a domain, a measure and a property object.

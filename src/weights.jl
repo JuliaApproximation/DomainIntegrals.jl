@@ -1,7 +1,7 @@
 ## Basic weight functions
 
 export LebesgueMeasure,
-    LebesgueSpace,
+    Lebesgue,
     LebesgueUnit,
     LebesgueDomain,
     LegendreWeight,
@@ -31,11 +31,11 @@ islebesguemeasure(m::Measure) = false
 islebesguemeasure(m::LebesgueMeasure) = true
 
 "The Lebesgue measure on the space `FullSpace{T}`."
-struct LebesgueSpace{T} <: LebesgueMeasure{T}
+struct Lebesgue{T} <: LebesgueMeasure{T}
 end
 
-LebesgueSpace() = LebesgueSpace{Float64}()
-similar(μ::LebesgueSpace, ::Type{T}) where {T} = LebesgueSpace{T}()
+Lebesgue() = Lebesgue{Float64}()
+similar(μ::Lebesgue, ::Type{T}) where {T} = Lebesgue{T}()
 
 
 "The Lebesgue measure on the unit interval `[0,1]`."
@@ -43,7 +43,7 @@ struct LebesgueUnit{T} <: LebesgueMeasure{T}
 end
 
 LebesgueUnit() = LebesgueUnit{Float64}()
-similar(μ::LebesgueUnit, ::Type{T}) where {T <: Real} = LebesgueSpace{T}()
+similar(μ::LebesgueUnit, ::Type{T}) where {T <: Real} = Lebesgue{T}()
 support(μ::LebesgueUnit{T}) where {T} = UnitInterval{T}()
 
 isnormalized(μ::LebesgueUnit) = true
@@ -230,5 +230,5 @@ unsafe_weightfun(μ::GaussianWeight, x) = gaussian_weightfun(x, prectype(μ))
 "The Lebesgue measure associated with the given domain"
 lebesguemeasure(domain::UnitInterval{T}) where {T} = LebesgueUnit{T}()
 lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreWeight{T}()
-lebesguemeasure(domain::FullSpace{T}) where {T} = LebesgueSpace{T}()
+lebesguemeasure(domain::FullSpace{T}) where {T} = Lebesgue{T}()
 lebesguemeasure(domain::Domain{T}) where {T} = LebesgueDomain{T}(domain)
