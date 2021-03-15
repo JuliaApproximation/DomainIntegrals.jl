@@ -5,319 +5,152 @@ export support,
     isdiscrete,
     iscontinuous,
     isnormalized,
-    weight,
+    weightfun,
     weightfunction,
     points,
     weights,
-    discrete_weight,
-    AbstractLebesgueMeasure,
-    LebesgueMeasure,
-    UnitLebesgueMeasure,
-    DomainLebesgueMeasure,
-    LegendreMeasure,
-    JacobiMeasure,
-    ChebyshevTMeasure,
-    ChebyshevMeasure,
-    ChebyshevUMeasure,
-    LaguerreMeasure,
-    HermiteMeasure,
-    GaussianMeasure,
-    DiracMeasure,
-    point,
-    lebesguemeasure
+    weight
 
 
-"Supertype of measures. The support of an `AbstractMeasure{T}` is a `Domain{T}`."
-abstract type AbstractMeasure{T} end
+"Supertype of measures."
+abstract type Measure{T} end
 
-domaintype(μ::AbstractMeasure) = domaintype(typeof(μ))
-domaintype(::Type{<:AbstractMeasure{T}}) where {T} = T
+domaintype(μ::Measure) = domaintype(typeof(μ))
+domaintype(::Type{<:Measure{T}}) where {T} = T
 
 "What is the codomain type of the measure?"
-codomaintype(μ::AbstractMeasure) = codomaintype(typeof(μ))
-codomaintype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
+codomaintype(μ::Measure) = codomaintype(typeof(μ))
+codomaintype(::Type{<:Measure{T}}) where {T} = prectype(T)
 
-prectype(::Type{<:AbstractMeasure{T}}) where {T} = prectype(T)
-numtype(::Type{<:AbstractMeasure{T}}) where {T} = numtype(T)
+prectype(::Type{<:Measure{T}}) where {T} = prectype(T)
+numtype(::Type{<:Measure{T}}) where {T} = numtype(T)
 
 "Is the measure normalized?"
-isnormalized(μ::AbstractMeasure) = false
+isnormalized(μ::Measure) = false
 
-convert(::Type{AbstractMeasure{T}}, μ::AbstractMeasure{T}) where {T} = μ
-convert(::Type{AbstractMeasure{T}}, μ::AbstractMeasure{S}) where {S,T} = similar(μ, T)
+# conversion to `Measure{T}` is a means to ensure a specific domain type `T`
+convert(::Type{Measure{T}}, μ::Measure{T}) where {T} = μ
+convert(::Type{Measure{T}}, μ::Measure{S}) where {S,T} = similar(μ, T)
+
+
+"""
+A `Weight` is a continuous measure that is defined in terms of a weight
+function: `dμ = w(x) dx`.
+"""
+abstract type Weight{T} <: Measure{T} end
 
 
 """
-A `Measure{T}` is a continuous measure that is defined in terms of a
-weightfunction: `dμ = w(x) dx`.
-"""
-abstract type Measure{T} <: AbstractMeasure{T} end
+A `DiscreteWeight` is a measure defined in terms of a discrete set of points
+and an associated set of weights.
 
+The measure implements the `points` and `weights` functions. The support of
+a discrete measure may be a continuous domain that includes all of the points.
 """
-A `DiscreteMeasure` is defined in terms of a discrete set of points and an
-associated weight vector.
-"""
-abstract type DiscreteMeasure{T} <: AbstractMeasure{T} end
+abstract type DiscreteWeight{T} <: Measure{T} end
 
 "Is the measure discrete?"
-isdiscrete(μ::Measure) = false
-isdiscrete(μ::DiscreteMeasure) = true
+isdiscrete(μ::Weight) = false
+isdiscrete(μ::DiscreteWeight) = true
+# We don't know the result for an abstract Measure,
+# so we can't provide a default here
 
 "Is the measure continuous?"
-iscontinuous(μ::Measure) = true
-iscontinuous(μ::DiscreteMeasure) = false
+iscontinuous(μ::Weight) = true
+iscontinuous(μ::DiscreteWeight) = false
+# Like above, no default
 
 
-## Support for continuous measures
 
-"Return the support of the measure"
+###############################
+## Continuous weight functions
+###############################
+
+
+# We define the functionality at the level of `Measure`, since not
+# all continuous measures are of type `Weight`.
+# This implementation is typically safe, as invoking these functions on a
+# discrete measur is likely to result in an error (because it does not implement
+# a weight function).
+
+"Return the support of the continuous measure"
 support(μ::Measure{T}) where {T} = FullSpace{T}()
 
 "Evaluate the weight function associated with the measure."
-function weight(μ::AbstractMeasure{T}, x::S) where {S,T}
+function weightfun(μ::Measure{T}, x::S) where {S,T}
     U = promote_type(S,T)
-    weight(convert(AbstractMeasure{U}, μ), convert(U, x))
+    weightfun(convert(Measure{U}, μ), convert(U, x))
 end
 
 # If the argument x is a vector: ensure the element types match
-function weight(μ::AbstractMeasure{Vector{S}}, x::AbstractVector{T}) where {S,T}
+function weightfun(μ::Measure{Vector{S}}, x::AbstractVector{T}) where {S,T}
     U = promote_type(S,T)
-    weight(convert(Measure{Vector{U}}, μ), convert(AbstractVector{U}, x))
+    weightfun(convert(Weight{Vector{U}}, μ), convert(AbstractVector{U}, x))
 end
 # If the measure expects SVector, convert x to SVector (we can assume matching eltype)
-weight(μ::AbstractMeasure{SVector{N,S}}, x::AbstractVector{T}) where {N,S,T} =
-    weight(μ, convert(SVector{N,S}, x))
+weightfun(μ::Measure{SVector{N,S}}, x::AbstractVector{T}) where {N,S,T} =
+    weightfun(μ, convert(SVector{N,S}, x))
 
 # Accept matching types, and matching vectors
-weight(μ::AbstractMeasure{T}, x::T) where {T} = weight1(μ, x)
-weight(μ::AbstractMeasure{Vector{T}}, x::AbstractVector{T}) where {T} = weight1(μ, x)
-weight(μ::AbstractMeasure{SVector{N,T}}, x::SVector{N,T}) where {N,T} = weight1(μ, x)
+weightfun(μ::Measure{T}, x::T) where {T} = weightfun1(μ, x)
+weightfun(μ::Measure{Vector{T}}, x::AbstractVector{T}) where {T} =
+    weightfun1(μ, x)
+weightfun(μ::Measure{SVector{N,T}}, x::SVector{N,T}) where {N,T} =
+    weightfun1(μ, x)
 
 # Check for support, then invoke unsafe_weight
-weight1(μ::AbstractMeasure, x) =
-    x ∈ support(μ) ? unsafe_weight(μ, x) : zero(codomaintype(μ))
+weightfun1(μ::Measure, x) =
+    x ∈ support(μ) ? unsafe_weightfun(μ, x) : zero(codomaintype(μ))
 
-weightfunction(m::AbstractMeasure) = x->weight(m, x)
-unsafe_weightfunction(m::AbstractMeasure) = x->unsafe_weight(m, x)
+# These are safe defaults for any measure
+weightfunction(μ::Measure) = x->weightfun(μ, x)
+unsafe_weightfunction(μ::Measure) = x->unsafe_weightfun(μ, x)
 
-## Support for discrete measures
 
-points(μ::DiscreteMeasure) = μ.points
-weights(μ::DiscreteMeasure) = μ.weights
+####################
+## Discrete weights
+####################
 
-support(μ::DiscreteMeasure) = points(μ)
+# The main interface: return the points and weights of the discrete measure
+points(μ::DiscreteWeight) = μ.points
+weights(μ::DiscreteWeight) = μ.weights
+support(μ::DiscreteWeight) = μ.domain
 
-function discrete_weight(μ::DiscreteMeasure, i)
+length(μ::DiscreteWeight) = length(points(μ))
+size(μ::DiscreteWeight) = size(points(μ))
+
+isnormalized(μ::DiscreteWeight) = sum(weights(μ)) ≈ 1
+
+
+# Discrete weights are equal if their points and weights are equal elementwise
+Base.:(==)(μ1::DiscreteWeight, μ2::DiscreteWeight) =
+    points(μ1) == points(μ2) && weights(μ1)==weights(μ2)
+Base.:(≈)(μ1::DiscreteWeight, μ2::DiscreteWeight) =
+    points(μ1) ≈ points(μ2) && weights(μ1) ≈ weights(μ2)
+
+
+function weight(μ::DiscreteWeight, i)
     # Perform a bounds check and invoke unsafe_discrete_weight,
     # so that concrete measures may implement e.g. an on-the-fly formula for
     # the weights without bounds checking
     @boundscheck checkbounds(μ, i)
-    unsafe_discrete_weight(μ, i)
+    unsafe_weight(μ, i)
 end
-checkbounds(μ::DiscreteMeasure, i) = checkbounds(points(μ), i)
+checkbounds(μ::DiscreteWeight, i) = checkbounds(points(μ), i)
 
-function unsafe_discrete_weight(μ::DiscreteMeasure, i)
+function unsafe_weight(μ::DiscreteWeight, i)
     @inbounds weights(μ)[i]
 end
 
-isnormalized(μ::DiscreteMeasure) = sum(weights(μ)) ≈ 1
 
-length(μ::DiscreteMeasure) = length(points(μ))
-
-
-## Basic measures
-
-"Supertype of Lebesgue measures"
-abstract type AbstractLebesgueMeasure{T} <: Measure{T} end
-
-unsafe_weight(μ::AbstractLebesgueMeasure, x) = one(codomaintype(μ))
-
-islebesguemeasure(m::AbstractMeasure) = false
-islebesguemeasure(m::AbstractLebesgueMeasure) = true
-
-"The Lebesgue measure on the space `FullSpace{T}`."
-struct LebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
+"A generic discrete weight that stores points and weights."
+struct GenericDiscreteWeight{T,P,W,D} <: DiscreteWeight{T}
+    points  ::  P
+    weights ::  W
+    domain  ::  D
 end
 
-LebesgueMeasure() = LebesgueMeasure{Float64}()
-similar(μ::LebesgueMeasure, ::Type{T}) where {T} = LebesgueMeasure{T}()
-
-
-"The Lebesgue measure on the unit interval `[0,1]`."
-struct UnitLebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
-end
-
-UnitLebesgueMeasure() = UnitLebesgueMeasure{Float64}()
-similar(μ::UnitLebesgueMeasure, ::Type{T}) where {T <: Real} = LebesgueMeasure{T}()
-support(μ::UnitLebesgueMeasure{T}) where {T} = UnitInterval{T}()
-
-isnormalized(μ::UnitLebesgueMeasure) = true
-
-"Lebesgue measure supported on a general domain."
-struct DomainLebesgueMeasure{T} <: AbstractLebesgueMeasure{T}
-    domain  ::  Domain{T}
-end
-
-similar(μ::DomainLebesgueMeasure, ::Type{T}) where {T} = DomainLebesgueMeasure{T}(μ.domain)
-support(m::DomainLebesgueMeasure) = m.domain
-
-
-
-#################
-# Applications
-#################
-
-"A point measure"
-struct DiracMeasure{T} <: DiscreteMeasure{T}
-    point   ::  T
-end
-
-similar(μ::DiracMeasure, ::Type{T}) where {T} = DiracMeasure{T}(μ.point)
-
-point(μ::DiracMeasure) = μ.point
-support(μ::DiracMeasure) = Point(μ.point)
-isnormalized(μ::DiracMeasure) = true
-unsafe_weight(μ::DiracMeasure, x) = convert(codomaintype(μ), Inf)
-
-
-
-## Some widely used measures associated with orthogonal polynomials follow
-
-
-"The Lebesgue measure on the interval `[-1,1]`."
-struct LegendreMeasure{T} <: AbstractLebesgueMeasure{T}
-end
-LegendreMeasure() = LegendreMeasure{Float64}()
-
-similar(μ::LegendreMeasure, ::Type{T}) where {T <: Real} = LegendreMeasure{T}()
-support(μ::LegendreMeasure{T}) where {T} = ChebyshevInterval{T}()
-
-
-"The Jacobi measure on the interval `[-1,1]`."
-struct JacobiMeasure{T} <: Measure{T}
-    α   ::  T
-    β   ::  T
-
-    JacobiMeasure{T}(α = zero(T), β = zero(T)) where {T} = new(α, β)
-end
-JacobiMeasure() = JacobiMeasure{Float64}()
-JacobiMeasure(α, β) = JacobiMeasure(promote(α, β)...)
-JacobiMeasure(α::T, β::T) where {T<:AbstractFloat} = JacobiMeasure{T}(α, β)
-JacobiMeasure(α::N, β::N) where {N<:Number} = JacobiMeasure(float(α), float(β))
-
-similar(μ::JacobiMeasure, ::Type{T}) where {T <: Real} = JacobiMeasure{T}(μ.α, μ.β)
-support(μ::JacobiMeasure{T}) where {T} = ChebyshevInterval{T}()
-unsafe_weight(μ::JacobiMeasure, x) = (1+x)^μ.α * (1-x)^μ.β
-
-jacobi_α(μ::JacobiMeasure) = μ.α
-jacobi_β(μ::JacobiMeasure) = μ.β
-
-
-"""
-The `Chebyshev` or `ChebyshevT` measure is the measure on `[-1,1]` with the
-Chebyshev weight `w(x) = 1/√(1-x^2)`.
-"""
-struct ChebyshevTMeasure{T} <: Measure{T}
-end
-ChebyshevTMeasure() = ChebyshevTMeasure{Float64}()
-
-const ChebyshevMeasure = ChebyshevTMeasure
-
-chebyshev_weight_firstkind(x) = 1/sqrt(1-x^2)
-
-similar(μ::ChebyshevTMeasure, ::Type{T}) where {T <: Real} = ChebyshevTMeasure{T}()
-support(μ::ChebyshevTMeasure{T}) where {T} = ChebyshevInterval{T}()
-unsafe_weight(μ::ChebyshevTMeasure, x) = chebyshev_weight_firstkind(x)
-
-
-"""
-The ChebyshevU measure is the measure on `[-1,1]` with the Chebyshev weight
-of the second kind `w(x) = √(1-x^2).`
-"""
-struct ChebyshevUMeasure{T} <: Measure{T}
-end
-ChebyshevUMeasure() = ChebyshevUMeasure{Float64}()
-
-chebyshev_weight_secondkind(x) = sqrt(1-x^2)
-
-similar(μ::ChebyshevUMeasure, ::Type{T}) where {T <: Real} = ChebyshevUMeasure{T}()
-support(μ::ChebyshevUMeasure{T}) where {T} = ChebyshevInterval{T}()
-unsafe_weight(μ::ChebyshevUMeasure, x) = chebyshev_weight_secondkind(x)
-
-
-convert(::Type{JacobiMeasure}, μ::LegendreMeasure{T}) where {T} =
-    JacobiMeasure{T}(0, 0)
-convert(::Type{JacobiMeasure}, μ::ChebyshevTMeasure{T}) where {T} =
-    JacobiMeasure{T}(-one(T)/2, -one(T)/2)
-convert(::Type{JacobiMeasure}, μ::ChebyshevUMeasure{T}) where {T} =
-    JacobiMeasure{T}(one(T)/2, one(T)/2)
-
-function convert(::Type{ChebyshevTMeasure}, μ::JacobiMeasure{T}) where {T}
-    (jacobi_α(μ) ≈ -one(T)/2 && jacobi_β(μ) ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTMeasure, μ))
-    ChebyshevTMeasure{T}()
-end
-
-function convert(::Type{ChebyshevUMeasure}, μ::JacobiMeasure{T}) where {T}
-    (jacobi_α(μ) ≈ one(T)/2 && jacobi_β(μ) ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUMeasure, μ))
-    ChebyshevUMeasure{T}()
-end
-
-function convert(::Type{LegendreMeasure}, μ::JacobiMeasure{T}) where {T}
-    (μ.α ≈ 0 && μ.β ≈ 0) || throw(InexactError(:convert, LegendreMeasure, μ))
-    LegendreMeasure{T}()
-end
-
-jacobi_α(μ::LegendreMeasure{T}) where {T} = zero(T)
-jacobi_β(μ::LegendreMeasure{T}) where {T} = zero(T)
-jacobi_α(μ::ChebyshevTMeasure{T}) where {T} = -one(T)/2
-jacobi_β(μ::ChebyshevTMeasure{T}) where {T} = -one(T)/2
-jacobi_α(μ::ChebyshevUMeasure{T}) where {T} = one(T)/2
-jacobi_β(μ::ChebyshevUMeasure{T}) where {T} = one(T)/2
-
-
-
-"The generalised Laguerre measure on the halfline `[0,∞)`."
-struct LaguerreMeasure{T} <: Measure{T}
-    α   ::  T
-
-    LaguerreMeasure{T}(α = zero(T)) where {T} = new(α)
-end
-LaguerreMeasure() = LaguerreMeasure{Float64}()
-LaguerreMeasure(α::T) where {T<:AbstractFloat} = LaguerreMeasure{T}(α)
-LaguerreMeasure(α) = LaguerreMeasure(float(α))
-
-similar(μ::LaguerreMeasure, ::Type{T}) where {T <: Real} = LaguerreMeasure{T}(μ.α)
-support(μ::LaguerreMeasure{T}) where {T} = HalfLine{T}()
-isnormalized(m::LaguerreMeasure) = m.α == 0
-unsafe_weight(μ::LaguerreMeasure, x) = exp(-x) * x^μ.α
-
-laguerre_α(μ::LaguerreMeasure) = μ.α
-
-
-"The Hermite measure with weight exp(-x^2) on the real line."
-struct HermiteMeasure{T} <: Measure{T}
-end
-HermiteMeasure() = HermiteMeasure{Float64}()
-
-hermite_weight(x) = exp(-x^2)
-
-similar(μ::HermiteMeasure, ::Type{T}) where {T <: Real} = HermiteMeasure{T}()
-unsafe_weight(μ::HermiteMeasure, x) = hermite_weight(x)
-
-
-"The Gaussian measure with weight exp(-|x|^2/2)."
-struct GaussianMeasure{T} <: Measure{T}
-end
-GaussianMeasure() = GaussianMeasure{Float64}()
-
-similar(μ::GaussianMeasure, ::Type{T}) where {T} = GaussianMeasure{T}()
-isnormalized(μ::GaussianMeasure) = true
-unsafe_weight(μ::GaussianMeasure, x) = 1/(2*convert(prectype(μ), pi))^(length(x)/2) * exp(-norm(x)^2)
-
-
-
-"The Lebesgue measure associated with the given domain"
-lebesguemeasure(domain::UnitInterval{T}) where {T} = UnitLebesgueMeasure{T}()
-lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreMeasure{T}()
-lebesguemeasure(domain::FullSpace{T}) where {T} = LebesgueMeasure{T}()
-lebesguemeasure(domain::Domain{T}) where {T} = DomainLebesgueMeasure{T}(domain)
+GenericDiscreteWeight(points, weights,domain) =
+    GenericDiscreteWeight{eltype(weights)}(points, weights,domain)
+GenericDiscreteWeight{T}(points::P, weights::W,domain::D) where {T,P,W,D} =
+    GenericDiscreteWeight{T,P,W,D}(points, weights, domain)

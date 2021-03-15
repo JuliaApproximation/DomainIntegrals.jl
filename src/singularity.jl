@@ -1,13 +1,27 @@
 
-export SingularPoint,
-    LogPointSingularity,
-    AlgebraicPointSingularity,
-    DiagonalSingularity
+export SingPoint,
+    LogSingPoint,
+    AlgebraicSingPoint,
+    DiagonallySingular
+
+
+"""
+A `Property` type describes a property of the integrand that is independent
+from the other aspects of the integral (domain, measure).
+
+The main examples are singularities of the integrand function, i.e., smoothness
+properties.
+"""
+abstract type Property end
+
+"No property of the integrand is known."
+struct NoProperty <: Property end
+
 
 "The supertype of all kinds of singularities of an integrand."
-abstract type Singularity end
+abstract type Singularity <: Property end
 
-"The integrand has no (known) singularity."
+"No singularity of the integrand is known."
 struct NoSingularity <: Singularity end
 
 "Supertype of all kinds of point singularities."
@@ -16,28 +30,33 @@ abstract type PointSingularity <: Singularity end
 point(s::PointSingularity) = s.point
 
 "An unspecified singularity occurring at a specific point."
-struct SingularPoint{T} <: PointSingularity
+struct SingPoint{T} <: PointSingularity
+    point   ::  T
+end
+
+"An unspecified singularity occurring at a corner point."
+struct SingCorner{T} <: PointSingularity
     point   ::  T
 end
 
 "A logarithmic singularity at a specific point."
-struct LogPointSingularity{T} <: PointSingularity
+struct LogSingPoint{T} <: PointSingularity
     point   ::  T
 end
 
 "An algebraic singularity at a specific point."
-struct AlgebraicPointSingularity{O,T} <: PointSingularity
+struct AlgebraicSingPoint{O,T} <: PointSingularity
     point   ::  T
     order   ::  O
 end
 
-order(s::AlgebraicPointSingularity) = s.order
+order(s::AlgebraicSingPoint) = s.order
 
 "Supertype of singularities along a curve."
 abstract type CurveSingularity <: Singularity end
 
 "For 2D integrands, a singularity along the line `x=y`."
-struct DiagonalSingularity <: CurveSingularity
+struct DiagonallySingular <: CurveSingularity
 end
 
 
@@ -45,6 +64,8 @@ end
 A list of breakpoints of the integrand, for example because the integrand
 is piecewise smooth.
 """
-struct Waypoints{P} <: Singularity
+struct Waypoints{P} <: Property
     points  ::  P
 end
+
+points(P::Waypoints) = P.points

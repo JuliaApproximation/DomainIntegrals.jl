@@ -4,7 +4,7 @@ function test_gausslegendre()
     d = 2n
     qs = Q_GaussLegendre(n)
     @test integral(qs, x -> x^(d-1), 1..2) ≈ 2^d/d-1^d/d
-    @test integral(BestRule(n), x -> x^(d-2), LegendreMeasure()) ≈ 2/(d-1)
+    @test integral(BestRule(n), x -> x^(d-2), LegendreWeight()) ≈ 2/(d-1)
 end
 
 function test_gaussjacobi()
@@ -14,7 +14,7 @@ function test_gaussjacobi()
     qs = Q_GaussJacobi(n, α, β)
     I = integral(x -> cos(x)*(1+x)^α*(1-x)^β, -1..1)
     @test abs(integral(qs, cos, -1..1) - I) < 1e-5
-    @test abs(integral(BestRule(n), cos, JacobiMeasure(α, β)) -I) < 1e-5
+    @test abs(integral(BestRule(n), cos, JacobiWeight(α, β)) -I) < 1e-5
 end
 
 function test_gausslaguerre()
@@ -23,7 +23,7 @@ function test_gausslaguerre()
     qs = Q_GaussLaguerre(n, α)
     I = integral(x->cos(x)*x^(α)*exp(-x), 0..10)
     @test abs(integral(qs, cos, HalfLine()) - I) < 1e-4
-    @test abs(integral(BestRule(n), cos, LaguerreMeasure(α)) - I) < 1e-4
+    @test abs(integral(BestRule(n), cos, LaguerreWeight(α)) - I) < 1e-4
 end
 
 function test_gausshermite()
@@ -31,7 +31,7 @@ function test_gausshermite()
     qs = Q_GaussHermite(n)
     I = integral(x->cos(x)*exp(-x^2), -5..5)
     @test abs(integral(qs, cos, DomainSets.FullSpace{Float64}()) - I) < 1e-5
-    @test abs(integral(BestRule(n), cos, HermiteMeasure()) - I) < 1e-5
+    @test abs(integral(BestRule(n), cos, HermiteWeight()) - I) < 1e-5
 end
 
 function test_gauss()

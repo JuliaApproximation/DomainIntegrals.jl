@@ -2,12 +2,28 @@
 using DomainSets: element, elements, numelements, ×
 
 """
-Recombine the outcome of several invocations of `I,E = quadrature(...)` into
+Recombine the outcome of several invocations of `I,E = integrate(...)` into
 a single `I,E` tuple, by summing the integral values and error estimates.
 """
 recombine_outcome(IEs) = sum(IE[1] for IE in IEs), sum(IE[2] for IE in IEs)
 
+#################
 ## Singularities
+#################
+
+const SplittingSingularity = Union{PointSingularity,DiagonallySingular}
+
+function integrate_prop(qs::AdaptiveStrategy, integrand, domain, measure, sing::SplittingSingularity)
+    domains = splitdomain_sing(sing, domain)
+    if length(domains) > 1
+        IEs = integrate_measure.(Ref(qs), Ref(integrand), domains, Ref(measure), Ref(sing))
+        recombine_outcome(IEs)
+    else
+        integrate_measure(qs, integrand, domain, measure, sing)
+    end
+end
+
+
 
 """
 Split the domain into a list of domains, such that any singularity lies
@@ -62,7 +78,7 @@ function splitdomain_point(x, domain::ProductDomain, domain1, domain2)
     [d1 × d2 for d1 in domains1,d2 in domains2]
 end
 
-splitdomain_sing(sing::DiagonalSingularity, domain) =
+splitdomain_sing(sing::DiagonallySingular, domain) =
     splitdomain_diagonal(domain)
 
 splitdomain_diagonal(domain::ProductDomain) = splitdomain_diagonal(domain, elements(domain)...)
@@ -90,24 +106,12 @@ function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, 
 end
 
 
-const SplittingSingularity = Union{PointSingularity,DiagonalSingularity}
 
-function quadrature_s(qs, integrand, domain, measure, sing::SplittingSingularity)
-    domains = splitdomain_sing(sing, domain)
-    if length(domains) > 1
-        IEs = quadrature_m.(Ref(qs), Ref(integrand), domains, Ref(measure), Ref(sing))
-        recombine_outcome(IEs)
-    else
-        quadrature_m(qs, integrand, domain, measure, sing)
-    end
-end
-
-
-
-
+############
 ## Measures
+############
 
-function quadrature_m(qs, integrand, domain, δ::DiracMeasure, sing)
+function integrate_measure(qs, integrand, domain, δ::DiracWeight, prop)
     x = point(δ)
     if x ∈ domain
         I = integrand(x)
@@ -118,27 +122,20 @@ function quadrature_m(qs, integrand, domain, δ::DiracMeasure, sing)
     I, E
 end
 
-function quadrature_m(qs, integrand, domain, μ::DiscreteMeasure, sing)
-    x = points(μ)
-    w = weights(μ)
-    I,E = zero_result(integrand, promote_type(prectype(domain),eltype(w)))
-    for i in 1:length(x)
-        if x[i] ∈ domain
-            I += w[i]*integrand(x[i])
-        end
-    end
-    I, E
+function integrate_measure(qs, integrand, domain, μ::DiscreteWeight, prop)
+    I = sum(w*integrand(x) for w in weights(μ), x in points(μ))
+    I, zero_error(I)
 end
 
 # Lebesgue measures can pass through unaltered
-# Other types of measures we "process" first, and then we continue with quadrature_d
-quadrature_m(qs, integrand, domain, measure::AbstractLebesgueMeasure, sing) =
-    quadrature_d(qs, integrand, domain, measure, sing)
+# Other types of measures we "process" first, and then we continue with integrate_domain
+integrate_measure(qs, integrand, domain, measure::LebesgueMeasure, prop) =
+    integrate_domain(qs, integrand, domain, measure, prop)
 
-function quadrature_m(qs, integrand, domain, measure::Measure{T}, sing) where {T}
-    prefactor, map, domain2, measure2, sing2 = process_measure(qs, domain, measure, sing)
+function integrate_measure(qs, integrand, domain, measure::Measure{T}, prop) where {T}
+    prefactor, map, domain2, measure2, prop2 = process_measure(qs, domain, measure, prop)
     integrand2 = transform_integrand(integrand, prefactor, map)
-    quadrature_d(qs, integrand2, domain2, measure2, sing2)
+    integrate_domain(qs, integrand2, domain2, measure2, prop2)
 end
 
 struct Identity end
@@ -150,32 +147,32 @@ transform_integrand(integrand, prefactor::Identity, map) = t -> integrand(map(t)
 transform_integrand(integrand, prefactor, map::Identity) = t -> prefactor(t) * integrand(t)
 transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(map(t))
 
-process_measure(qs, domain, measure::Measure, sing) =
-    process_measure_default(qs, domain, measure, sing)
+process_measure(qs, domain, measure::Measure, prop) =
+    process_measure_default(qs, domain, measure, prop)
 
-# By default we replace all measures by the LebesgueMeasure on the space
-function process_measure_default(qs, domain, measure::Measure{T}, sing) where {T}
-    prefactor = t -> unsafe_weight(measure, t)
-    prefactor, id, domain, LebesgueMeasure{T}(), sing
+# By default we replace all measures by the LebesgueSpace on the space
+function process_measure_default(qs, domain, measure::Measure{T}, prop) where {T}
+    prefactor = t -> unsafe_weightfun(measure, t)
+    prefactor, id, domain, LebesgueSpace{T}(), prop
 end
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
-function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteWeight{T}, prop) where {T}
     U = sqrt(-log(eps(T)))
-    hermite_weight, id, -U..U, LebesgueMeasure{T}(), sing
+    hermite_weight, id, -U..U, LebesgueSpace{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
-function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevTWeight{T}, prop) where {T}
     # Transformation is: f(t) -> pi*f(cos(pi*t))
     Tpi = convert(T, pi)
     prefactor = t -> Tpi
     map = t -> cos(Tpi*t)
-    prefactor, map, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing
+    prefactor, map, UnitInterval{T}(), LebesgueUnit{T}(), prop
 end
 
 # same as above, but on a subinterval
-function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevTMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevTWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
     prefactor = t -> Tpi
     map = t -> cos(Tpi*t)
@@ -185,18 +182,18 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing
+    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueSpace{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevU weight as well
-function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevUWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
     prefactor = t -> Tpi * sin(Tpi*t)^2
     map = t -> cos(Tpi*t)
-    prefactor, map, UnitInterval{T}(), UnitLebesgueMeasure{T}(), sing
+    prefactor, map, UnitInterval{T}(), LebesgueUnit{T}(), prop
 end
 
-function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevUMeasure{T}, sing) where {T}
+function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevUWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
     prefactor = t -> Tpi * sin(Tpi*t)^2
     map = t -> cos(Tpi*t)
@@ -206,27 +203,45 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueMeasure{T}(), sing
+    prefactor, map, acos(b)/pi..acos(a)/pi, LebesgueSpace{T}(), prop
 end
 
 
 # The "best" rule for certain measures becomes a Gauss rule
-quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval{T}, μ::LegendreMeasure, sing) where {T} =
-    quadrature_m(Q_GaussLegendre(T, qs.n), integrand, domain, μ, sing)
+integrate_measure(qs::BestRule, integrand, domain::ChebyshevInterval{T}, μ::LegendreWeight, prop) where {T} =
+    integrate_measure(Q_GaussLegendre(T, qs.n), integrand, domain, μ, prop)
 
-quadrature_m(qs::BestRule, integrand, domain::ChebyshevInterval, μ::JacobiMeasure{T}, sing) where {T} =
-    quadrature_m(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreMeasure{T}(), sing)
+integrate_measure(qs::BestRule, integrand, domain::ChebyshevInterval, μ::JacobiWeight{T}, prop) where {T} =
+    integrate_measure(Q_GaussJacobi(qs.n, μ.α, μ.β), integrand, domain, LegendreWeight{T}(), prop)
 
-quadrature_m(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreMeasure{T}, sing) where {T} =
-    quadrature_m(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, LebesgueMeasure{T}(), sing)
+integrate_measure(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreWeight{T}, prop) where {T} =
+    integrate_measure(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, LebesgueSpace{T}(), prop)
 
-quadrature_m(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteMeasure{T}, sing) where {T} =
-    quadrature_m(Q_GaussHermite(qs.n), integrand, domain, LebesgueMeasure{T}(), sing)
+integrate_measure(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteWeight{T}, prop) where {T} =
+    integrate_measure(Q_GaussHermite(qs.n), integrand, domain, LebesgueSpace{T}(), prop)
 
 
+###########
 ## Domains
+###########
 
-quadrature_d(qs, integrand, domain::EmptySpace, measure, sing) =
+const ExpandableDomain = Union{UnionDomain,ProductDomain}
+
+function integrate_domain(qs, integrand, domain::ExpandableDomain, measure, prop)
+    domains = expand_domain(domain)
+    if length(domains) > 1
+        # We deliberately invoke integrate here, starting the chain again from the start.
+        # This gives the earlier steps a change to simplify again, with the new domains
+        IEs = integrate.(Ref(qs), Ref(integrand), domains, Ref(measure), Ref(prop))
+        recombine_outcome(IEs)
+    else
+        # Nothing changed, we move on in the chain with the original domain
+        select_quad(qs, integrand, domain, measure, prop)
+    end
+end
+
+
+integrate_domain(qs, integrand, domain::EmptySpace, measure, prop) =
     zero_result(integrand, prectype(domain))
 
 "Convert a union of domains into a vector of domains without overlap"
@@ -245,9 +260,7 @@ end
 
 
 expand_domain(domain::Domain) = (domain,)
-
 expand_domain(domain::UnionDomain) = nonoverlapping_domains(domain)
-
 expand_domain(domain::ProductDomain) = expand_domain(domain, elements(domain)...)
 
 function expand_domain(domain::ProductDomain, domain1::Domain, domain2::Domain)
@@ -260,39 +273,24 @@ function expand_domain(domain::ProductDomain, domain1::Domain, domain2::Domain, 
     domains1 = expand_domain(domain1)
     domains2 = expand_domain(domain2)
     domains3 = expand_domain(domain3)
-    [×(d1, d2, d3) for d1 in domains1,d2 in domains2,d3 in domains3]
+    [×(d1, d2, d3) for d1 in domains1, d2 in domains2, d3 in domains3]
 end
 
 function expand_domain(domain::ProductDomain, domain1::Domain, domain2::Domain, domain3::Domain, domain4::Domain)
     domains1 = expand_domain(domain1)
     domains2 = expand_domain(domain2)
     domains3 = expand_domain(domain3)
-    domains3 = expand_domain(domain3)
-    [×(d1,d2,d3,d4) for d1 in domains1,d2 in domains2,d3 in domains3]
+    domains4 = expand_domain(domain4)
+    [×(d1,d2,d3,d4) for d1 in domains1, d2 in domains2, d3 in domains3, d4 in domains4]
 end
 
 
-const ExpandableDomain = Union{UnionDomain,ProductDomain}
-
-function quadrature_d(qs, integrand, domain::MappedDomain, measure, sing)
+function integrate_domain(qs, integrand, domain::MappedDomain, measure, prop)
     m = inverse_map(domain)
-    quadrature_d(qs, t->integrand(m(t))/jacdet(m,t), superdomain(domain), measure, sing)
+    integrate_domain(qs, t->integrand(m(t))/jacdet(m,t), superdomain(domain), measure, prop)
 end
 
-function quadrature_d(qs, integrand, domain::ExpandableDomain, measure, sing)
-    domains = expand_domain(domain)
-    if length(domains) > 1
-        # We deliberately invoke quadrature here, starting the chain again from the start.
-        # This gives the earlier steps a change to simplify again, with the new domains
-        IEs = quadrature.(Ref(qs), Ref(integrand), domains, Ref(measure), Ref(sing))
-        recombine_outcome(IEs)
-    else
-        # Nothing changed, we move on in the chain with the original domain
-        select_quad(qs, integrand, domain, measure, sing)
-    end
-end
-
-function quadrature_d(qs, integrand, domain::LowerRightTriangle{T}, measure::LebesgueMeasure, sing) where {T}
+function integrate_domain(qs, integrand, domain::LowerRightTriangle{T}, measure::LebesgueSpace, prop) where {T}
     # Restriction to Lebesgue measure because we would have to map the measure too
     # TODO with a more general framework for change-of-variables in integrals
     # For now, we hardcode the change of variables and we use Duffy's trick.
@@ -302,16 +300,16 @@ function quadrature_d(qs, integrand, domain::LowerRightTriangle{T}, measure::Leb
     d = UnitInterval{T}()
     square = (a..b) × d
     # TODO: change the singularity to something sensible: the diagonal is mapped to the right side of the square
-    quadrature(qs, x -> integrand(SVector(x[1],a+x[2]*(x[1]-a))) * (x[1]-a),
-        square, measure, NoSingularity())
+    integrate(qs, x -> integrand(SVector(x[1],a+x[2]*(x[1]-a))) * (x[1]-a),
+        square, measure, NoProperty())
 end
 
-function quadrature_d(qs, integrand, domain::UpperRightTriangle{T}, measure::LebesgueMeasure, sing) where {T}
+function integrate_domain(qs, integrand, domain::UpperRightTriangle{T}, measure::LebesgueSpace, prop) where {T}
     a = domain.a
     b = domain.b
     # For x from a to b, and y from x to b, we set y = b-(b-x)*u, where u goes from 0 to 1. We then have dy = (b-x)du.
     d = UnitInterval{T}()
     square = (a..b) × d
-    quadrature(qs, x -> integrand(SVector(x[1], b-(b-x[1])*(1-x[2])))*(b-x[1]),
-        square, measure, NoSingularity())
+    integrate(qs, x -> integrand(SVector(x[1], b-(b-x[1])*(1-x[2])))*(b-x[1]),
+        square, measure, NoProperty())
 end

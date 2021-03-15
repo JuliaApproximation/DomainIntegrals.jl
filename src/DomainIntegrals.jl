@@ -21,9 +21,11 @@ import DomainSets:
 include("common.jl")
 include("gauss.jl")
 include("measure.jl")
+include("weights.jl")
 include("singularity.jl")
 include("strategy.jl")
 include("rules.jl")
 include("integral.jl")
+include("forms.jl")
 
 end # module

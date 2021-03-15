@@ -1,10 +1,10 @@
 
 export integral,
-    quadrature
+    integrate
+
 
 """
-The suggested quadrature strategy based on the arguments supplied to
-the `integral` function.
+The suggested quadrature strategy based on the `integral` arguments.
 
 By default, adaptive quadrature is chosen.
 """
@@ -12,12 +12,9 @@ suggestedstrategy(args...) = QuadAdaptive()
 
 returntype(integrand, ::Type{S}) where {S} = Base.Core.Compiler.return_type(integrand, (S,))
 
-errortype(x) = errortype(typeof(x))
-errortype(::Type{T}) where {T <: AbstractFloat} = T
-errortype(::Type{Complex{T}}) where {T} = errortype(T)
-
-zero_error(T) = zero(errortype(T))
-unknown_error(T) = -one(errortype(T))
+zero_error(x) = zero_error(typeof(x))
+zero_error(::Type{T}) where {T} = zero(prectype(T))
+unknown_error(T) = -one(prectype(T))
 unknown_error(z::Number) = -one(z)
 
 function zero_result(integrand, ::Type{S}) where {S}
@@ -31,8 +28,7 @@ end
 
 tolerance(d::Domain{T}) where {T} = tolerance(T)
 tolerance(::Type{T}) where {T<:AbstractFloat} = 10eps(T)
-tolerance(::Type{Complex{T}}) where {T} = tolerance(T)
-tolerance(::Type{SVector{N,T}}) where {N,T} = tolerance(T)
+tolerance(::Type{T}) where {T} = tolerance(prectype(T))
 
 
 """
@@ -44,110 +40,131 @@ Example:
 integral(cos, 0.0..1.0)
 ```
 """
-integral(integrand) = error("Please specify an integration domain or an integration measure.")
-function integral(integrand, arg1, args...)
-    I, E = quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
-    I
-end
-function integral(qs::QuadratureStrategy, integrand, args...)
-    I, E = quadrature(qs, integrand, args...)
+function integral end
+
+"Like integral, but also returns an error estimate (if applicable)."
+function integrate end
+
+function integral(args...)
+    I, E = integrate(args...)
     I
 end
 
-"Like integral, but also returns an error estimate (if applicable)."
-function quadrature end
+integral(integrand) = error("Please specify an integration domain or an integration measure.")
+
+# associate a domain with a measure: use its support
+_domain(μ::Measure) = support(μ)
+
+# associate a measure with a domain
+# we try to avoid memory allocations, hence LebesgeeSpace{T} is the default
+_measure(domain::Domain{T}) where {T} = LebesgueSpace{T}()
+# these cases have a known allocation-free lebesgue measure
+_measure(domain::ChebyshevInterval) = lebesguemeasure(domain)
+_measure(domain::UnitInterval) = lebesguemeasure(domain)
+# sometimes the T of an interval is an integer (e.g. in 0..1)
+_measure(domain::AbstractInterval{T}) where {T} = LebesgueSpace{float(T)}()
+
+
+# Process the arguments until there is a domain, a measure and a property object.
+process_arguments(measure::Measure) =
+    process_arguments(_domain(measure), measure)
+process_arguments(domain::Domain, measure::Measure) =
+    process_arguments(domain, measure, NoProperty())
+process_arguments(measure::Measure, domain::Domain) =
+    process_arguments(domain, measure, NoProperty())
+process_arguments(measure::Measure, prop::Property) =
+    process_arguments(_domain(measure), measure, prop)
+process_arguments(domain::Domain{T}) where {T} =
+    process_arguments(domain, _measure(domain))
+process_arguments(domain::Domain{T}, prop::Property) where {T} =
+    process_arguments(domain, _measure(domain), prop)
+# all good now
+process_arguments(domain::Domain, measure::Measure, prop::Property) =
+    (domain, measure, prop)
+
+process_arguments(args...) = error("Arguments to integral or integrate functions not understood.")
+
+integrate(qs::ChebyshevIntervalRule{T}, integrand) where {T} =
+    integrate(qs, integrand, ChebyshevInterval{T}())
+integrate(qs::HalfLineRule{T}, integrand) where {T} =
+    integrate(qs, integrand, HalfLine{T}())
+integrate(qs::RealLineRule{T}, integrand) where {T} =
+    integrate(qs, integrand, FullSpace{T}())
+
+
+integrate(integrand, args...) =
+    integrate(integrand, process_arguments(args...)...)
+
+integrate(qs::QuadratureStrategy, integrand, args...) =
+    integrate(qs, integrand, process_arguments(args...)...)
+
+integrate(integrand, domain::Domain, measure::Measure, prop::Property) =
+    integrate(suggestedstrategy(domain, measure, prop), integrand, domain, measure, prop)
 
 
 # The process is as follows:
 # - The argument list is completed (missing domain or measure are added)
-#   -> quadrature_s is invoked
-# - quadrature_s processes singularities using dispatch
-#   -> quadrature_m is invoked
-# - quadrature_m processes measures using dispatch
-#   -> quadrature_d is invoked
-# - quadrature_d processes domains using dispatch
+#   -> integrate_prop is invoked
+# - integrate_prop processes properties using dispatch
+#   -> integrate_measure is invoked
+# - integrate_measure processes measures using dispatch
+#   -> integrate_domain is invoked
+# - integrate_domain processes domains using dispatch
 #   -> apply_quad is invoked
 # - If apply_quad is not intercepted, a fallback routine is invoked.
 
-# Completion of interface:
-# - the default domain is the support of the measure (if given)
-# - the default measure for Domain{T} is LebesgueMeasure{T}
-# - the default singularity is no singularity
-quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure) =
-    quadrature(qs, integrand, support(measure), measure)
-quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure, sing::Singularity) =
-    quadrature(qs, integrand, support(measure), measure, sing)
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}) where {T} =
-    quadrature(qs, integrand, domain, LebesgueMeasure{T}())
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain{T}, sing::Singularity) where {T} =
-    quadrature(qs, integrand, domain, LebesgueMeasure{T}(), sing)
-quadrature(qs::QuadratureStrategy, integrand, measure::AbstractMeasure, domain::Domain) =
-    quadrature(qs, integrand, domain, measure)
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure) =
-    quadrature(qs, integrand, domain, measure, NoSingularity())
-quadrature(qs::ChebyshevIntervalRule{T}, integrand) where {T} =
-    quadrature(qs, integrand, ChebyshevInterval{T}())
-quadrature(qs::HalfLineRule{T}, integrand) where {T} =
-    quadrature(qs, integrand, HalfLine{T}())
-quadrature(qs::RealLineRule{T}, integrand) where {T} =
-    quadrature(qs, integrand, FullSpace{T}())
 
-quadrature(::QuadratureStrategy, arg1, args...) =
-    error("Incorrect type or number of arguments?")
-quadrature(integrand, arg1, args...) =
-    quadrature(suggestedstrategy(arg1, args...), integrand, arg1, args...)
+# go to step P once we have the correct signature
+integrate(qs::QuadratureStrategy, integrand, domain::Domain, measure::Measure, prop::Property) =
+    integrate_prop(qs, integrand, domain, measure, prop)
 
-# go to step S once we have the correct signature
-quadrature(qs::QuadratureStrategy, integrand, domain::Domain, measure::AbstractMeasure, sing::Singularity) =
-    quadrature_s(qs, integrand, domain, measure, sing)
-
-# STEP S: dispatch on the singularity
-quadrature_s(qs, integrand, domain, measure, sing) =
-    quadrature_m(qs, integrand, domain, measure, sing)
+# STEP P: dispatch on the property
+integrate_prop(qs, integrand, domain, measure, prop) =
+    integrate_measure(qs, integrand, domain, measure, prop)
 
 # STEP M: dispatch on the measure
-quadrature_m(qs, integrand, domain, measure, sing) =
-    quadrature_d(qs, integrand, domain, measure, sing)
+integrate_measure(qs, integrand, domain, measure, prop) =
+    integrate_domain(qs, integrand, domain, measure, prop)
 
 # STEP D: dispatch on the domain
-quadrature_d(qs, integrand, domain, measure, sing) =
-    select_quad(qs, integrand, domain, measure, sing)
+integrate_domain(qs, integrand, domain, measure, prop) =
+    select_quad(qs, integrand, domain, measure, prop)
 
 
 # Selection: use a suitable quadrature strategy
 
 # Generic adaptive quadrature in 1D invokes QuadGK, everywhere else it uses hcubature
-select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T<:Number} =
-    apply_quad(Q_quadgk(qs), integrand, domain, measure, sing)
-select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, sing) where {T} =
-    apply_quad(Q_hcubature(qs), integrand, domain, measure, sing)
-select_quad(qs, integrand, domain, measure, sing) =
-    apply_quad(qs, integrand, domain, measure, sing)
+select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, prop) where {T<:Number} =
+    apply_quad(Q_quadgk(qs), integrand, domain, measure, prop)
+select_quad(qs::QuadAdaptive, integrand, domain::Domain{T}, measure, prop) where {T} =
+    apply_quad(Q_hcubature(qs), integrand, domain, measure, prop)
+select_quad(qs, integrand, domain, measure, prop) =
+    apply_quad(qs, integrand, domain, measure, prop)
 
 # FINAL STEP: invoke apply_quad, with a fallback if necessary
-apply_quad(qs, integrand, domain, measure, sing) =
-    fallback_quadrature(qs, integrand, domain, measure, sing)
+apply_quad(qs, integrand, domain, measure, prop) =
+    fallback_integrate(qs, integrand, domain, measure, prop)
 
-apply_quad(qs, integrand, domain::ProductDomain, measure, sing) =
-    apply_productquad(qs, integrand, domain, measure, sing, elements(domain)...)
+apply_quad(qs, integrand, domain::ProductDomain, measure, prop) =
+    apply_productquad(qs, integrand, domain, measure, prop, elements(domain)...)
 
-apply_productquad(qs, integrand, domain, measure, sing, domains...) =
-    fallback_quadrature(qs, integrand, domain, measure, sing)
+apply_productquad(qs, integrand, domain, measure, prop, domains...) =
+    fallback_integrate(qs, integrand, domain, measure, prop)
 
-fallback_quadrature(qs, integrand, domain, measure, sing) =
+fallback_integrate(qs, integrand, domain, measure, prop) =
     error("Don't know how to integrate on $domain with strategy $(qs).")
 
 
 # For quadgk, we only know how to compute intervals
-function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::LebesgueMeasure, prop)
     if isempty(domain)
-        zero_result(integrand, prectype(qs))
+        zero_result(integrand, prectype(domain))
     else
         quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
     end
 end
 
-function apply_productquad(qs::Q_hcubature, integrand, domain, measure, sing, domains::AbstractInterval...)
+function apply_productquad(qs::Q_hcubature, integrand, domain, measure, prop, domains::AbstractInterval...)
     if islebesguemeasure(measure)
         apply_hcubature(qs,integrand, domains...)
     else
@@ -162,7 +179,7 @@ function apply_hcubature(qs::Q_hcubature,integrand, domains::AbstractInterval...
 end
 
 # Given a rule on [-1,1] and a different interval, we map the rule
-function apply_quad(qs::ChebyshevIntervalRule, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::ChebyshevIntervalRule, integrand, domain::AbstractInterval, measure::LebesgueMeasure, prop)
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = (b-a)/2
@@ -172,7 +189,7 @@ function apply_quad(qs::ChebyshevIntervalRule, integrand, domain::AbstractInterv
     z, unknown_error(z)
 end
 
-function apply_quad(qs::UnitIntervalRule, integrand, domain::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::UnitIntervalRule, integrand, domain::AbstractInterval, measure::LebesgueMeasure, prop)
     a = leftendpoint(domain)
     b = rightendpoint(domain)
     D = b-a
@@ -182,7 +199,7 @@ function apply_quad(qs::UnitIntervalRule, integrand, domain::AbstractInterval, m
     z, unknown_error(z)
 end
 
-function apply_quad(qs::IntervalRule, integrand, interval::AbstractInterval, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::IntervalRule, integrand, interval::AbstractInterval, measure::LebesgueMeasure, prop)
     a, b = extrema(interval)
     A, B = extrema(domain(qs))
     m = interval_map(A, B, a, b)
@@ -194,7 +211,7 @@ function apply_quad(qs::IntervalRule, integrand, interval::AbstractInterval, mea
 end
 
 # Make sure that a half line rule is applied to a half line integral
-function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::LebesgueMeasure, prop)
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
@@ -202,7 +219,7 @@ function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::Abst
 end
 
 # Make sure that a real line rule is applied to a real line integral
-function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::AbstractLebesgueMeasure, sing)
+function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::LebesgueMeasure, prop)
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))
@@ -210,7 +227,7 @@ function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::Abs
 end
 
 # Any other quadrature rule, we just apply it
-function apply_quad(qs::GenericDomainRule, integrand, domain, measure, sing)
+function apply_quad(qs::GenericDomainRule, integrand, domain, measure, prop)
     @assert domain(qs) == domain
     x = points(qs)
     w = weights(qs)
