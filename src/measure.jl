@@ -8,6 +8,7 @@ export Measure,
     isdiscrete,
     iscontinuous,
     isnormalized,
+    isuniform,
     weightfun,
     weightfunction,
     points,
@@ -122,7 +123,7 @@ length(μ::DiscreteWeight) = length(points(μ))
 size(μ::DiscreteWeight) = size(points(μ))
 
 isnormalized(μ::DiscreteWeight) = _isnormalized(μ, points(μ), weights(μ))
-_isnormalized(μ, points, weights) = sum(weights(μ)) ≈ 1
+_isnormalized(μ, points, weights) = sum(weights) ≈ 1
 
 "Does the discrete measure have equal weights?"
 isuniform(μ::DiscreteWeight) = _isuniform(μ, points(μ), weights(μ))

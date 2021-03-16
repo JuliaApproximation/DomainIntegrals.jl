@@ -159,7 +159,7 @@ end
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
 function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteWeight{T}, prop) where {T}
     U = sqrt(-log(eps(T)))
-    hermite_weight, id, -U..U, Lebesgue{T}(), prop
+    hermite_weightfun, id, -U..U, Lebesgue{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
