@@ -123,8 +123,21 @@ function integrate_measure(qs, integrand, domain, δ::DiracWeight, prop)
 end
 
 function integrate_measure(qs, integrand, domain, μ::DiscreteWeight, prop)
-    I = sum(w*integrand(x) for (w,x) in zip(weights(μ), points(μ)))
-    I, zero_error(I)
+    if domain == covering(μ)
+        I = sum(w*integrand(x) for (w,x) in zip(weights(μ), points(μ)))
+        I, zero_error(I)
+    else
+        # Only sum over the elements that lie in the domain
+        I, E = zero_result(integrand, eltype(domain))
+        x = points(μ)
+        w = weights(μ)
+        for i in 1:length(x)
+            if x[i] ∈ domain
+                I += w[i]*integrand(x[i])
+            end
+        end
+        I, zero_error(I)
+    end
 end
 
 # Lebesgue measures can pass through unaltered

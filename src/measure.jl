@@ -36,6 +36,10 @@ isnormalized(μ::Measure) = false
 convert(::Type{Measure{T}}, μ::Measure{T}) where {T} = μ
 convert(::Type{Measure{T}}, μ::Measure{S}) where {S,T} = similar(μ, T)
 
+"Return the support of the measure."
+support(μ::Measure{T}) where {T} = FullSpace{T}()
+
+
 
 """
 A `Weight` is a continuous measure that is defined in terms of a weight
@@ -48,8 +52,7 @@ abstract type Weight{T} <: Measure{T} end
 A `DiscreteWeight` is a measure defined in terms of a discrete set of points
 and an associated set of weights.
 
-The measure implements the `points` and `weights` functions. The `support` of
-a discrete measure may be a continuous domain that includes all of the points.
+The measure implements the `points` and `weights` functions.
 """
 abstract type DiscreteWeight{T} <: Measure{T} end
 
@@ -64,9 +67,9 @@ iscontinuous(μ::Weight) = true
 iscontinuous(μ::DiscreteWeight) = false
 # Like above, no default
 
-"Return the support of the measure"
-support(μ::Measure{T}) where {T} = FullSpace{T}()
+support(μ::DiscreteWeight) = points(μ)
 
+covering(μ::DiscreteWeight{T}) where {T} = FullSpace{T}()
 
 
 ###############################
