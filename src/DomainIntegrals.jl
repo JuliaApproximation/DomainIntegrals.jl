@@ -14,8 +14,7 @@ import DomainSets:
     domaintype,
     codomaintype,
     prectype,
-    numtype,
-    domain
+    numtype
 
 
 include("common.jl")

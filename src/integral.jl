@@ -50,8 +50,6 @@ function integral(args...)
     I
 end
 
-integral(integrand) = error("Please specify an integration domain or an integration measure.")
-
 # associate a domain with a measure: use its support
 _domain(μ::Measure) = support(μ)
 
@@ -91,6 +89,11 @@ integrate(qs::HalfLineRule{T}, integrand) where {T} =
 integrate(qs::RealLineRule{T}, integrand) where {T} =
     integrate(qs, integrand, FullSpace{T}())
 
+## The use of generators
+integrate(gen::Base.Generator{<:Domain}, args...) =
+    integrate(gen.f, gen.iter, args...)
+integrate(gen::Base.Generator{<:Base.Iterators.ProductIterator}, args...) =
+    integrate(gen.f, ProductDomain(gen.iter.iterators...), args...)
 
 integrate(integrand, args...) =
     integrate(integrand, process_arguments(args...)...)

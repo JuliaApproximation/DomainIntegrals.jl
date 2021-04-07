@@ -16,29 +16,33 @@ boxes.
 
 ## Examples
 
-Evaluate the integral of `cos` on the interval `[0,1]` using `integral` or `quadrature`. The `integral` function simply returns a value, while `quadrature`
-returns both the value and an estimated accuracy (as returned by the underlying packages):
+Evaluate the integral of `cos` on the interval `[0,1]` using `integral` or `integrate`. The `integral` function simply returns a value, while `integrate`
+returns both the value and an estimated accuracy (as returned by the underlying packages). Integrand and domain can be specified separately or in generator
+form:
 ```julia
 julia> using DomainSets, DomainIntegrals
 
 julia> integral(cos, 0..1.0)
 0.8414709848078965
 
-julia> integral(x -> exp(x[1]+x[2]), (0..1.0)^2)
+julia> integral(exp(x) for x in 2..3)
+12.6964808242570
+
+julia> integral(exp(x+y) for (x,y) in (0..1)^2)
 2.9524924420120535
 
-julia> quadrature(cos, UnionDomain(0..1, 2..3))
+julia> integrate(cos(x) for x in UnionDomain(0..1, 2..3))
 (0.07329356604208204, 1.1102230246251565e-16)
 ```
 
 It is possible to specify singularities of the integrand. The integration domain is split such that the singularity lies on the boundary:
 ```julia
-julia> integral(t -> sin(log(abs(t))), -1..1, LogPointSingularity(0.0))
+julia> integral( (sin(log(abs(t))) for t in  -1..1), LogSingPoint(0.0))
 -1.0000000021051316
 
 julia> using DomainSets: ×
 
-julia> julia> integral( x -> exp(log(abs(x[1]-x[2]))), (2..3) × (1..4), DiagonallySingular())
+julia> integral( ( exp(log(abs(x-y))) for (x,y) in (2..3) × (1..4) ), DiagonallySingular())
 2.333333333333333
 ```
 
@@ -47,7 +51,7 @@ Weighted integrals are supported through the definition of measures. A few stand
 julia> integral(cos, ChebyshevTMeasure())
 2.403939430634413
 
-julia> integral(t -> cos(t)*1/sqrt(1-t^2), -1.0..1.0)
+julia> integral(cos(t)*1/sqrt(1-t^2) for t in  -1.0..1.0)
 2.403939410869398
 ```
 For the particular example of the ChebyshevT measure (associated with Chebyshev polynomials of the first kind), the typical cosine map is applied which removes the algebraic endpoint singularities of the weight function, before it is evaluated numerically.
@@ -63,7 +67,7 @@ A few well-known quadrature rules are included, as provided by the [GaussQuadrat
 julia> integral(Q_GaussLaguerre(10), cos)
 0.5000005097999486
 
-julia> integral(t -> cos(t)*exp(-t), HalfLine())
+julia> integral(cos(t)*exp(-t) for t in HalfLine())
 0.5
 ```
 
