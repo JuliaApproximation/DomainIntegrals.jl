@@ -90,10 +90,20 @@ integrate(qs::RealLineRule{T}, integrand) where {T} =
     integrate(qs, integrand, FullSpace{T}())
 
 ## The use of generators
-integrate(gen::Base.Generator{<:Domain}, args...) =
-    integrate(gen.f, gen.iter, args...)
-integrate(gen::Base.Generator{<:Base.Iterators.ProductIterator}, args...) =
-    integrate(gen.f, ProductDomain(gen.iter.iterators...), args...)
+integrate(gen::Base.Generator, args...) =
+    integrate(process_generator(gen)..., args...)
+# - catch something like f(x) for x in domain
+process_generator(gen::Base.Generator{<:Domain}) = (gen.f, gen.iter)
+# - catch something like f(x,y) for x in domain1, y in domain2
+process_generator(gen::Base.Generator{<:Base.Iterators.ProductIterator}) =
+    process_generator(gen, gen.iter.iterators)
+function process_generator(gen, iterators::Tuple{Vararg{Domain}})
+    domain = productdomain(iterators...)
+    dims = map(dimension, iterators)
+    @show dims
+    @show typeof(iterators)
+    (gen.f, domain)
+end
 
 integrate(integrand, args...) =
     integrate(integrand, process_arguments(args...)...)
@@ -117,9 +127,25 @@ integrate(integrand, domain::Domain, measure::Measure, prop::Property) =
 # - If apply_quad is not intercepted, a fallback routine is invoked.
 
 
+
+struct Integrand{F}
+    fun ::  F
+end
+
+(∘)(f::Integrand, g::Function) = integrand_compose(f.fun, g)
+integrand_compose(f, g) = Integrand(t -> f(g(t)))
+(∘)(f::Integrand, g::IdentityMap) = f
+
+(*)(f::IdentityMap, g::Integrand) = g
+(*)(f, g::Integrand) = integrand_times(f, g.fun)
+integrand_times(f::Function, g) = Integrand(t -> f(t)*g(t))
+integrand_times(c::Number, g) = Integrand(t -> c*g(t))
+
 # go to step P once we have the correct signature
-integrate(qs::QuadratureStrategy, integrand, domain::Domain, measure::Measure, prop::Property) =
+integrate(qs::QuadratureStrategy, integrand::Integrand, domain::Domain, measure::Measure, prop::Property) =
     integrate_prop(qs, integrand, domain, measure, prop)
+integrate(qs::QuadratureStrategy, integrand, domain::Domain, measure::Measure, prop::Property) =
+    integrate_prop(qs, Integrand(integrand), domain, measure, prop)
 
 # STEP P: dispatch on the property
 integrate_prop(qs, integrand, domain, measure, prop) =
@@ -131,8 +157,12 @@ integrate_measure(qs, integrand, domain, measure, prop) =
 
 # STEP D: dispatch on the domain
 integrate_domain(qs, integrand, domain, measure, prop) =
-    select_quad(qs, integrand, domain, measure, prop)
+    integrate_done(qs, integrand, domain, measure, prop)
 
+integrate_done(qs, integrand::Integrand, domain, measure, prop) =
+    integrate_done(qs, integrand.fun, domain, measure, prop)
+integrate_done(qs, integrand::Function, domain, measure, prop) =
+    select_quad(qs, integrand, domain, measure, prop)
 
 # Selection: use a suitable quadrature strategy
 
@@ -149,7 +179,7 @@ apply_quad(qs, integrand, domain, measure, prop) =
     fallback_integrate(qs, integrand, domain, measure, prop)
 
 apply_quad(qs, integrand, domain::ProductDomain, measure, prop) =
-    apply_productquad(qs, integrand, domain, measure, prop, elements(domain)...)
+    apply_productquad(qs, integrand, domain, measure, prop, components(domain)...)
 
 apply_productquad(qs, integrand, domain, measure, prop, domains...) =
     fallback_integrate(qs, integrand, domain, measure, prop)
@@ -175,7 +205,7 @@ function apply_productquad(qs::Q_hcubature, integrand, domain, measure, prop, do
     end
 end
 
-function apply_hcubature(qs::Q_hcubature,integrand, domains::AbstractInterval...)
+function apply_hcubature(qs::Q_hcubature, integrand, domains::AbstractInterval...)
     a = map(leftendpoint, domains)
     b = map(rightendpoint, domains)
     hcubature(integrand, a, b; rtol=qs.rtol,atol=qs.atol, maxevals = qs.maxevals)
@@ -205,7 +235,7 @@ end
 function apply_quad(qs::IntervalRule, integrand, interval::AbstractInterval, measure::LebesgueMeasure, prop)
     a, b = extrema(interval)
     A, B = extrema(domain(qs))
-    m = interval_map(A, B, a, b)
+    m = mapto(A..B, a..b)
     J = (b-a)/(B-A)
     x = points(qs)
     w = weights(qs)

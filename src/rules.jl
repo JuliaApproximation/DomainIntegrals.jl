@@ -1,5 +1,5 @@
 
-using DomainSets: element, elements, numelements, ×
+using DomainSets: component, components, ncomponents, ×
 
 """
 Recombine the outcome of several invocations of `I,E = integrate(...)` into
@@ -70,7 +70,7 @@ function splitdomain_point(x, domain::AbstractInterval)
     end
 end
 
-splitdomain_point(x, domain::ProductDomain) = splitdomain_point(x, domain, elements(domain)...)
+splitdomain_point(x, domain::ProductDomain) = splitdomain_point(x, domain, components(domain)...)
 
 function splitdomain_point(x, domain::ProductDomain, domain1, domain2)
     domains1 = splitdomain_point(x[1], domain1)
@@ -81,7 +81,7 @@ end
 splitdomain_sing(sing::DiagonallySingular, domain) =
     splitdomain_diagonal(domain)
 
-splitdomain_diagonal(domain::ProductDomain) = splitdomain_diagonal(domain, elements(domain)...)
+splitdomain_diagonal(domain::ProductDomain) = splitdomain_diagonal(domain, components(domain)...)
 
 function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, domain2::AbstractInterval)
     T = prectype(domain)
@@ -145,49 +145,46 @@ end
 integrate_measure(qs, integrand, domain, measure::LebesgueMeasure, prop) =
     integrate_domain(qs, integrand, domain, measure, prop)
 
+# function integrate_measure(qs, integrand, domain, measure::Measure{T}, prop) where {T}
+#     prefactor, map, domain2, measure2, prop2 = process_measure(qs, domain, measure, prop)
+#     integrand2 = transform_integrand(integrand, prefactor, map)
+#     integrate_domain(qs, integrand2, domain2, measure2, prop2)
+# end
+
 function integrate_measure(qs, integrand, domain, measure::Measure{T}, prop) where {T}
-    prefactor, map, domain2, measure2, prop2 = process_measure(qs, domain, measure, prop)
-    integrand2 = transform_integrand(integrand, prefactor, map)
+    integrand2, domain2, measure2, prop2 = process_measure(qs, integrand, domain, measure, prop)
     integrate_domain(qs, integrand2, domain2, measure2, prop2)
 end
 
-struct Identity end
-(::Identity)(x) = x
-const id = Identity()
+# transform_integrand(integrand, prefactor::IdentityMap, map::IdentityMap) = integrand
+# transform_integrand(integrand, prefactor::IdentityMap, map) = t -> integrand(map(t))
+# transform_integrand(integrand, prefactor, map::IdentityMap) = t -> prefactor(t) * integrand(t)
+# transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(map(t))
 
-transform_integrand(integrand, prefactor::Identity, map::Identity) = integrand
-transform_integrand(integrand, prefactor::Identity, map) = t -> integrand(map(t))
-transform_integrand(integrand, prefactor, map::Identity) = t -> prefactor(t) * integrand(t)
-transform_integrand(integrand, prefactor, map) = t -> prefactor(t) * integrand(map(t))
-
-process_measure(qs, domain, measure::Measure, prop) =
-    process_measure_default(qs, domain, measure, prop)
+process_measure(qs, integrand, domain, measure::Measure, prop) =
+    process_measure_default(qs, integrand, domain, measure, prop)
 
 # By default we replace all measures by the Lebesgue on the space
-function process_measure_default(qs, domain, measure::Measure{T}, prop) where {T}
-    prefactor = t -> unsafe_weightfun(measure, t)
-    prefactor, id, domain, Lebesgue{T}(), prop
-end
+process_measure_default(qs, integrand, domain, measure::Measure{T}, prop) where {T} =
+    (t->unsafe_weightfun(measure, t)) * integrand, domain, Lebesgue{T}(), prop
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
-function process_measure(qs::AdaptiveStrategy, domain::FullSpace{T}, measure::HermiteWeight{T}, prop) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::FullSpace{T}, measure::HermiteWeight{T}, prop) where {T}
     U = sqrt(-log(eps(T)))
-    hermite_weightfun, id, -U..U, Lebesgue{T}(), prop
+    hermite_weightfun * integrand, -U..U, Lebesgue{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevT weight, to avoid the singularities
-function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevTWeight{T}, prop) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevTWeight{T}, prop) where {T}
     # Transformation is: f(t) -> pi*f(cos(pi*t))
     Tpi = convert(T, pi)
-    prefactor = t -> Tpi
     map = t -> cos(Tpi*t)
-    prefactor, map, UnitInterval{T}(), LebesgueUnit{T}(), prop
+    Tpi * (integrand ∘ map), UnitInterval{T}(), LebesgueUnit{T}(), prop
 end
 
 # same as above, but on a subinterval
-function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevTWeight{T}, prop) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevTWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
-    prefactor = t -> Tpi
     map = t -> cos(Tpi*t)
     a, b = extrema(domain)
     a < -1.001 && throw(BoundsError(measure, a))
@@ -195,18 +192,18 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
+    Tpi * (integrand ∘ map), acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
 end
 
 # apply the cosine map for integrals with the ChebyshevU weight as well
-function process_measure(qs::AdaptiveStrategy, domain::ChebyshevInterval, measure::ChebyshevUWeight{T}, prop) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::ChebyshevInterval, measure::ChebyshevUWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
     prefactor = t -> Tpi * sin(Tpi*t)^2
     map = t -> cos(Tpi*t)
-    prefactor, map, UnitInterval{T}(), LebesgueUnit{T}(), prop
+    prefactor * (integrand ∘ map), UnitInterval{T}(), LebesgueUnit{T}(), prop
 end
 
-function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure::ChebyshevUWeight{T}, prop) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::AbstractInterval, measure::ChebyshevUWeight{T}, prop) where {T}
     Tpi = convert(T, pi)
     prefactor = t -> Tpi * sin(Tpi*t)^2
     map = t -> cos(Tpi*t)
@@ -216,7 +213,7 @@ function process_measure(qs::AdaptiveStrategy, domain::AbstractInterval, measure
     # Set a and b to be within [-1,1] in order to avoid errors with acos below
     a = max(a, -1)
     b = min(b, 1)
-    prefactor, map, acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
+    prefactor * (integrand ∘ map), acos(b)/pi..acos(a)/pi, Lebesgue{T}(), prop
 end
 
 
@@ -249,7 +246,7 @@ function integrate_domain(qs, integrand, domain::ExpandableDomain, measure, prop
         recombine_outcome(IEs)
     else
         # Nothing changed, we move on in the chain with the original domain
-        select_quad(qs, integrand, domain, measure, prop)
+        integrate_done(qs, integrand, domain, measure, prop)
     end
 end
 
@@ -260,9 +257,9 @@ integrate_domain(qs, integrand, domain::EmptySpace, measure, prop) =
 "Convert a union of domains into a vector of domains without overlap"
 function nonoverlapping_domains(domain::UnionDomain{T}) where {T}
     domains = Vector{Domain{T}}()
-    push!(domains, element(domain, 1))
-    for i in 2:numelements(domain)
-        d = element(domain, i)
+    push!(domains, component(domain, 1))
+    for i in 2:ncomponents(domain)
+        d = component(domain, i)
         for j=1:i-1
             d = d \ domains[j]
         end
@@ -274,7 +271,7 @@ end
 
 expand_domain(domain::Domain) = (domain,)
 expand_domain(domain::UnionDomain) = nonoverlapping_domains(domain)
-expand_domain(domain::ProductDomain) = expand_domain(domain, elements(domain)...)
+expand_domain(domain::ProductDomain) = expand_domain(domain, components(domain)...)
 
 function expand_domain(domain::ProductDomain, domain1::Domain, domain2::Domain)
     domains1 = expand_domain(domain1)
@@ -312,9 +309,9 @@ function integrate_domain(qs, integrand, domain::LowerRightTriangle{T}, measure:
     # For x from a to b, and y from a to x, we set y = a+(x-a)*u, where u goes from 0 to 1. We then have dy = (x-1)du.
     d = UnitInterval{T}()
     square = (a..b) × d
+    triangle_map = x -> SVector(x[1],a+x[2]*(x[1]-a))
     # TODO: change the singularity to something sensible: the diagonal is mapped to the right side of the square
-    integrate(qs, x -> integrand(SVector(x[1],a+x[2]*(x[1]-a))) * (x[1]-a),
-        square, measure, NoProperty())
+    integrate(qs, (x->(x[1]-a)) * (integrand ∘ triangle_map), square, measure, NoProperty())
 end
 
 function integrate_domain(qs, integrand, domain::UpperRightTriangle{T}, measure::Lebesgue, prop) where {T}
@@ -323,6 +320,25 @@ function integrate_domain(qs, integrand, domain::UpperRightTriangle{T}, measure:
     # For x from a to b, and y from x to b, we set y = b-(b-x)*u, where u goes from 0 to 1. We then have dy = (b-x)du.
     d = UnitInterval{T}()
     square = (a..b) × d
-    integrate(qs, x -> integrand(SVector(x[1], b-(b-x[1])*(1-x[2])))*(b-x[1]),
-        square, measure, NoProperty())
+    triangle_map = x -> SVector(x[1], b-(b-x[1])*(1-x[2]))
+    integrate(qs, (x->(b-x[1])) * (integrand ∘ triangle_map), square, measure, NoProperty())
 end
+
+# function integrate_domain(qs, integrand, domain, measure, prop)
+#     prefactor, map, domain2, measure2, prop2 = process_domain(qs, domain, measure, prop)
+#     integrate_domain(qs, integrand, domain2, measure2, prop2, prefactor, map)
+# end
+#
+# function process_domain(qs, domain::Domain{T}, measure, prop) where {T}
+#     P = DomainSets.Parameterization()
+#     fromcanonical(domain, p), canonical(domain, P)
+#     qs, domain, measure, prop
+# end
+#
+# integrate_domain(qs, integrand, domain, measure, prop, prefactor::IdentityMap, map::IdentityMap) =
+#     integrate_done(qs, integrand, domain, measure, prop)
+#
+# function integrate_domain(qs, integrand, domain, measure, prop, prefactor::IdentityMap, map::IdentityMap)
+#     integrand2 = transform_integrand(integrand, prefactor, map)
+#     integrate_domain(qs, integrand2, domain, measure, prop)
+# end
