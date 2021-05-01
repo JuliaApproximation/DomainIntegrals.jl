@@ -2,8 +2,9 @@
 export SingPoint,
     LogSingPoint,
     AlgebraicSingPoint,
-    DiagonallySingular
+    SingularDiagonal
 
+@deprecate DiagonallySingular SingularDiagonal
 
 """
 A `Property` type describes a property of the integrand that is independent
@@ -56,7 +57,7 @@ order(s::AlgebraicSingPoint) = s.order
 abstract type CurveSingularity <: Singularity end
 
 "For 2D integrands, a singularity along the line `x=y`."
-struct DiagonallySingular <: CurveSingularity
+struct SingularDiagonal <: CurveSingularity
 end
 
 

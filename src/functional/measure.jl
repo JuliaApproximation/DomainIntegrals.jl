@@ -166,3 +166,76 @@ GenericDiscreteWeight(points, weights) =
     GenericDiscreteWeight{eltype(points)}(points, weights)
 GenericDiscreteWeight{T}(points::P, weights::W) where {T,P,W} =
     GenericDiscreteWeight{T,P,W}(points, weights)
+
+
+####################
+## Mapped weight
+####################
+
+
+"""
+Representation of a weight mapped to a new weight.
+
+Given a weight `w(x)dx` and a map `y=m(x)`, the mapped weight is defined as
+`w(m(x))/J(m(x))dx`, where `J` is the jacobian determinant of `m`.
+
+The definition is such that we have the following equality after a change of
+variables:
+
+integral(t->f(t), domain, weight) =
+    integral(t -> f(inverse(m,t))), m.(domain), MappedWeight(m, weight)
+"""
+struct MappedWeight{T,MAP,M} <: Weight{T}
+    fmap    ::  MAP
+    weight  ::  M
+end
+
+MappedWeight(map, weight::Weight{T}) where {T} = MappedWeight{T}(map, weight)
+MappedWeight{T}(map, weight) where {T} =
+    MappedWeight{T,typeof(map),typeof(weight)}(map, weight)
+
+export mappedmeasure
+"Map the weight using the given map."
+mappedmeasure(map, weight::Weight) = MappedWeight(map, weight)
+mappedmeasure(map, weight::MappedWeight) = MappedWeight(map ∘ forward_map(weight), supermeasure(weight))
+
+forward_map(m::MappedWeight) = m.fmap
+supermeasure(m::MappedWeight) = m.weight
+
+support(m::MappedWeight) = forward_map(m).(support(supermeasure(m)))
+
+unsafe_weightfun(m::MappedWeight, x) = unsafe_weightfun(supermeasure(m), inverse(forward_map(m), x)) / jacdet(forward_map(m), x)
+
+
+####################
+## Product weights
+####################
+
+"A product weight."
+struct ProductWeight{T,M} <: Weight{T}
+    weights ::  M
+end
+
+components(m::ProductWeight) = m.weights
+
+function ProductWeight(weights...)
+    T = Tuple{map(domaintype, weights)...}
+    ProductWeight{T}(weights...)
+end
+function ProductWeight(weights::Vararg{Weight{<:Number},N}) where {N}
+    T = promote_type(map(domaintype, weights)...)
+    ProductWeight{SVector{N,T}}(weights...)
+end
+ProductWeight{T}(weights::Weight...) where {T} =
+    ProductWeight{T,typeof(weights)}(weights)
+
+islebesguemeasure(μ::ProductWeight) = all(map(islebesguemeasure, components(μ)))
+isnormalized(m::ProductWeight) = all(map(isnormalized, components(μ)))
+
+export productmeasure
+"Construct the product of the given measures."
+productmeasure(weights::Weight...) = ProductWeight(weights...)
+
+support(m::ProductWeight{T}) where {T} = ProductDomain{T}(map(support, components(m))...)
+
+unsafe_weightfun(m::ProductWeight, x) = mapreduce(unsafe_weightfun, *, components(m), x)

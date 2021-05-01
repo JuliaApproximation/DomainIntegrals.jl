@@ -26,9 +26,10 @@ property(F::AbstractIntegral) = F.prop
 form(F::AbstractIntegral, f) = integral(f, domain(F), measure(F), property(F))
 
 struct Integral <: AbstractIntegral
-    domain  ::  Domain
-    measure ::  Measure
-    prop    ::  Property
+    integrand   ::  Integrand
+    domain      ::  Domain
+    measure     ::  Measure
+    prop        ::  Property
 end
 
 

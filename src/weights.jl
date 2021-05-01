@@ -2,8 +2,8 @@
 
 export LebesgueMeasure,
     Lebesgue,
-    LebesgueUnit,
     LebesgueDomain,
+    lebesguemeasure,
     LegendreWeight,
     JacobiWeight,
     ChebyshevWeight,
@@ -13,8 +13,7 @@ export LebesgueMeasure,
     HermiteWeight,
     GaussianWeight,
     DiracWeight,
-    point,
-    lebesguemeasure
+    point
 
 
 ####################

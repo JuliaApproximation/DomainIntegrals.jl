@@ -7,7 +7,7 @@ function test_measures()
     @test domaintype(m1) == Float64
     @test DomainIntegrals.unsafe_weightfun(m1, 0.4) == 1
 
-    m2 = LebesgueUnit()
+    m2 = DomainIntegrals.LebesgueUnit()
     @test !isdiscrete(m2)
     @test iscontinuous(m2)
     @test isnormalized(m2)

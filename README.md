@@ -42,7 +42,7 @@ julia> integral( (sin(log(abs(t))) for t in  -1..1), LogSingPoint(0.0))
 
 julia> using DomainSets: ×
 
-julia> integral( ( exp(log(abs(x-y))) for (x,y) in (2..3) × (1..4) ), DiagonallySingular())
+julia> integral( ( exp(log(abs(x-y))) for (x,y) in (2..3) × (1..4) ), SingularDiagonal())
 2.333333333333333
 ```
 
@@ -72,6 +72,6 @@ julia> integral(cos(t)*exp(-t) for t in HalfLine())
 ```
 
 
-The DomainIntegrals package is extensible. The quadrature routine invokes a series of functions (`integrate_prop`, `integrate_measure`, `integrate_domain`) that allow to
+The DomainIntegrals package is extensible. The quadrature routine invokes a series of functions (`integrate_property`, `integrate_measure`, `integrate_domain`) that allow to
 dispatch on the type of singularity, measure and domain respectively. The user
 can add methods to these functions to teach DomainIntegrals how to evaluate new kinds of integrals. As an example of a rule that is included, the `integrate_domain` function dispatches on the `DomainUnion` type and recursively evaluates the integrals on each of the composing parts separately (if they do not overlap). The cosine map of Chebyshev measures is implemented by specializing `integrate_measure` for the case of a `ChebyshevTMeasure`. See the file `rules.jl` for other examples.

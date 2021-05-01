@@ -10,22 +10,30 @@ import Base: convert, checkbounds, length,
     *, ∘
 
 import DomainSets:
-    EmptySpace,
-    FullSpace,
     domaintype,
     codomaintype,
     prectype,
-    numtype
+    numtype,
+    forward_map,
+    components
+
+using DomainSets: ×,
+    EmptySpace, FullSpace
 
 
 include("common.jl")
 include("gauss.jl")
-include("measure.jl")
+include("functional/measure.jl")
 include("weights.jl")
 include("singularity.jl")
 include("strategy.jl")
-include("rules.jl")
+include("integrand.jl")
+include("processing/properties.jl")
+include("processing/measure.jl")
+include("processing/domain.jl")
 include("integral.jl")
-include("forms.jl")
+include("complex.jl")
+
+include("functional/forms.jl")
 
 end # module
