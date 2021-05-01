@@ -203,11 +203,19 @@ function apply_quad(qs::Q_hcubature, integrand, domain, measure, properties...)
     end
 end
 
+function apply_hcubature(qs::Q_hcubature, integrand, domain)
+    f = x -> integrand(x) * DomainSets.indomain(x, domain)
+    apply_hcubature(qs, f, boundingbox(domain))
+end
+
 function apply_hcubature(qs::Q_hcubature, integrand, domain::ProductDomain)
-    @assert all(DomainSets.isinterval, components(domain))
-    a = map(float, map(infimum, components(domain)))
-    b = map(float, map(supremum, components(domain)))
-    hcubature(integrand, a, b; rtol=qs.rtol, atol=qs.atol, maxevals = qs.maxevals)
+    if all(DomainSets.isinterval, components(domain))
+        a = map(float, map(infimum, components(domain)))
+        b = map(float, map(supremum, components(domain)))
+        hcubature(integrand, a, b; rtol=qs.rtol, atol=qs.atol, maxevals = qs.maxevals)
+    else
+        apply_hcubature(qs, x -> integrand(x)*DomainSets.indomain(x, domain), boundingbox(domain))
+    end
 end
 
 # Given a rule on [-1,1] and a different interval, we map the rule

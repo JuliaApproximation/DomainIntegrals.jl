@@ -64,6 +64,9 @@ function test_some_integrals()
 
     g(z) = 5/z
     @test abs(1/(2*pi*im)*integral(g, ComplexUnitCircle()) - 5) < 1e-6
+
+    strategy = QuadAdaptive(maxevals=1e6)
+    @test abs(integral(strategy, x->1, UnitDisk()) - pi) < 1e-5
 end
 
 function test_integrals()
