@@ -5,6 +5,7 @@ using GaussQuadrature, FastGaussQuadrature, HCubature
 
 using StaticArrays
 using IntervalSets, DomainSets
+using CompositeTypes.Display
 
 import Base: convert, checkbounds, length,
     *, ∘
@@ -18,10 +19,12 @@ import DomainSets:
     components
 
 using DomainSets: ×,
-    EmptySpace, FullSpace
+    EmptySpace, FullSpace,
+    euclideandimension
 
 
-include("common.jl")
+include("extra/common.jl")
+
 include("gauss.jl")
 include("functional/measure.jl")
 include("weights.jl")
@@ -32,7 +35,7 @@ include("processing/properties.jl")
 include("processing/measure.jl")
 include("processing/domain.jl")
 include("integral.jl")
-include("complex.jl")
+include("complexplane.jl")
 
 include("functional/forms.jl")
 

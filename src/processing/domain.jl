@@ -6,7 +6,7 @@ has_integration_domain(d) = hasparameterization(d)
 "Return the integration domain associated `d`."
 integration_domain(d) = parameterdomain(d)
 "Return the map from the integration domain of `d` to `d`."
-from_integration_domain(d) = from_parameterdomain(d)
+mapfrom_integration_domain(d) = mapfrom_parameterdomain(d)
 
 # Avoid the affine map for intervals and cubes
 has_integration_domain(d::Interval) = false
@@ -62,7 +62,7 @@ process_domain(qs, integrand, domain, measure, properties...) =
 function process_domain(qs, integrand, domain::Domain, measure::Lebesgue, properties...)
     if has_integration_domain(domain)
         paramdomain = integration_domain(domain)
-        fmap = from_integration_domain(domain)
+        fmap = mapfrom_integration_domain(domain)
         (DomainSets.diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
     else
         (integrand, domain, measure, properties...)

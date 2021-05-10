@@ -21,15 +21,15 @@ abstract type AbstractIntegral <: OneForm end
 
 domain(F::AbstractIntegral) = F.domain
 measure(F::AbstractIntegral) = F.measure
-property(F::AbstractIntegral) = F.prop
+properties(F::AbstractIntegral) = F.properties
 
-form(F::AbstractIntegral, f) = integral(f, domain(F), measure(F), property(F))
+form(F::AbstractIntegral, f) = integral(f, domain(F), measure(F), properties(F)...)
 
 struct Integral <: AbstractIntegral
-    integrand   ::  Integrand
-    domain      ::  Domain
-    measure     ::  Measure
-    prop        ::  Property
+    integrand
+    domain
+    measure
+    properties
 end
 
 

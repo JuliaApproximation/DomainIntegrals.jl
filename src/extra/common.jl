@@ -21,3 +21,5 @@ end
 
 DomainSets.indomain(x, d::UpperRightTriangle) =
    (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[1] >= x[2])
+
+const StaticTypes = DomainSets.StaticTypes

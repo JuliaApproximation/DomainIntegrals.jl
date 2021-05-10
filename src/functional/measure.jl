@@ -239,3 +239,9 @@ productmeasure(weights::Weight...) = ProductWeight(weights...)
 support(m::ProductWeight{T}) where {T} = ProductDomain{T}(map(support, components(m))...)
 
 unsafe_weightfun(m::ProductWeight, x) = mapreduce(unsafe_weightfun, *, components(m), x)
+
+# I/O routines
+Display.combinationsymbol(d::ProductWeight) = Display.Times()
+Display.displaystencil(d::ProductWeight) = composite_displaystencil(d)
+Base.show(io::IO, mime::MIME"text/plain", d::ProductWeight) = composite_show(io, mime, d)
+Base.show(io::IO, d::ProductWeight) = composite_show_compact(io, d)

@@ -36,6 +36,8 @@ end
 Lebesgue() = Lebesgue{Float64}()
 similar(μ::Lebesgue, ::Type{T}) where {T} = Lebesgue{T}()
 
+Base.show(io::IO, μ::Lebesgue) = print(io, "dx")
+
 
 "The Lebesgue measure on the unit interval `[0,1]`."
 struct LebesgueUnit{T} <: LebesgueMeasure{T}
@@ -47,6 +49,9 @@ support(μ::LebesgueUnit{T}) where {T} = UnitInterval{T}()
 
 isnormalized(μ::LebesgueUnit) = true
 
+Base.show(io::IO, μ::LebesgueUnit) = print(io, "dx(0..1)")
+
+
 "Lebesgue measure supported on a general domain."
 struct LebesgueDomain{T} <: LebesgueMeasure{T}
     domain  ::  Domain{T}
@@ -55,6 +60,8 @@ end
 similar(μ::LebesgueDomain, ::Type{T}) where {T} = LebesgueDomain{T}(μ.domain)
 support(m::LebesgueDomain) = m.domain
 
+Base.show(io::IO, mime::MIME"text/plain", μ::LebesgueDomain) = composite_show(io, mime, μ)
+Display.displaystencil(μ::LebesgueDomain) = ["dx(", support(μ), ")"]
 
 
 ###############
@@ -73,6 +80,7 @@ support(μ::DiracWeight) = Point(μ.point)
 isnormalized(μ::DiracWeight) = true
 unsafe_weightfun(μ::DiracWeight, x) = convert(codomaintype(μ), Inf)
 
+Base.show(io::IO, μ::DiracWeight) = iszero(point(μ)) ? print(io, "δ(x)dx") : print(io, "δ(x-$(repr(point(μ))))dx")
 
 
 ###################################
@@ -87,6 +95,9 @@ LegendreWeight() = LegendreWeight{Float64}()
 
 similar(μ::LegendreWeight, ::Type{T}) where {T <: Real} = LegendreWeight{T}()
 support(μ::LegendreWeight{T}) where {T} = ChebyshevInterval{T}()
+
+Base.show(io::IO, μ::LegendreWeight) = print(io, "dx(-1..1)  (Legendre)")
+Display.object_parentheses(μ::LegendreWeight) = true
 
 
 "The Jacobi weight on the interval `[-1,1]`."
@@ -110,6 +121,9 @@ unsafe_weightfun(μ::JacobiWeight, x) = jacobi_weightfun(x, μ.α, μ.β)
 jacobi_α(μ::JacobiWeight) = μ.α
 jacobi_β(μ::JacobiWeight) = μ.β
 
+Base.show(io::IO, μ::JacobiWeight) = print(io, "(1+x)^$(jacobi_α(μ))(1-x)^$(jacobi_β(μ)) dx  (Jacobi)")
+Display.object_parentheses(μ::JacobiWeight) = true
+
 
 """
 The `Chebyshev` or `ChebyshevT` weight is the measure on `[-1,1]` with the
@@ -129,6 +143,9 @@ unsafe_weightfun(μ::ChebyshevTWeight, x) = chebyshev_weight_firstkind(x)
 
 weightfunction(μ::ChebyshevTWeight) = chebyshev_weight_firstkind
 
+Base.show(io::IO, μ::ChebyshevTWeight) = print(io, "1/√(1+x)^2 dx  (ChebyshevT)")
+Display.object_parentheses(μ::ChebyshevTWeight) = true
+
 
 """
 The ChebyshevU weight is the measure on `[-1,1]` with the Chebyshev weight
@@ -145,6 +162,9 @@ support(μ::ChebyshevUWeight{T}) where {T} = ChebyshevInterval{T}()
 unsafe_weightfun(μ::ChebyshevUWeight, x) = chebyshev_weight_secondkind(x)
 
 weightfunction(μ::ChebyshevUWeight) = chebyshev_weight_secondkind
+
+Base.show(io::IO, μ::ChebyshevUWeight) = print(io, "√(1+x)^2 dx  (ChebyshevU)")
+Display.object_parentheses(μ::ChebyshevUWeight) = true
 
 
 convert(::Type{JacobiWeight}, μ::LegendreWeight{T}) where {T} =
@@ -198,6 +218,10 @@ unsafe_weightfun(μ::LaguerreWeight, x) = laguerre_weightfun(x, μ.α)
 
 laguerre_α(μ::LaguerreWeight) = μ.α
 
+Base.show(io::IO, μ::LaguerreWeight) =
+    laguerre_α(μ) == 0 ? print(io, "exp(-x)dx  (Laguerre)") : print(io, "x^$(laguerre_α(μ))exp(-x)dx  (Laguerre)")
+Display.object_parentheses(μ::LaguerreWeight) = true
+
 
 "The Hermite measure with weight exp(-x^2) on the real line."
 struct HermiteWeight{T} <: Weight{T}
@@ -211,6 +235,9 @@ unsafe_weightfun(μ::HermiteWeight, x) = hermite_weightfun(x)
 
 weightfunction(μ::HermiteWeight) = hermite_weightfun
 
+Base.show(io::IO, μ::HermiteWeight) = print(io, "exp(-x^2)dx  (Hermite)")
+Display.object_parentheses(μ::HermiteWeight) = true
+
 
 "The Gaussian measure with weight exp(-|x|^2/2)."
 struct GaussianWeight{T} <: Weight{T}
@@ -223,6 +250,11 @@ gaussian_weightfun(x, ::Type{T} = prectype(x)) where {T} =
 similar(μ::GaussianWeight, ::Type{T}) where {T} = GaussianWeight{T}()
 isnormalized(μ::GaussianWeight) = true
 unsafe_weightfun(μ::GaussianWeight, x) = gaussian_weightfun(x, prectype(μ))
+
+Base.show(io::IO, μ::GaussianWeight{T}) where {T<:StaticTypes} =
+    print(io, "1/(2π)^($(euclideandimension(T)/2)) exp(-|x|^2)dx  (Gauss)")
+Base.show(io::IO, μ::GaussianWeight) = print(io, "C(d) exp(-|x|^2)dx  (Gauss)")
+Display.object_parentheses(μ::GaussianWeight) = true
 
 
 
