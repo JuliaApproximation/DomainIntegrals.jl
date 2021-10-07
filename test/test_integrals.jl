@@ -33,6 +33,8 @@ function test_some_integrals()
     z2 = hcubature(f2, (0,0), (1,1))[1]
     @test abs(integral(f2, (0..1)^2) - z2) < 1e-6
 
+    @test integral(exp, Point(0.5)) == 0.0
+
     # a mapped domain
     @test abs(integral(cos, DomainSets.MappedDomain(LinearMap(1/2), 0..1))-sin(2)) < 1e-6
 

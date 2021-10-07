@@ -73,6 +73,9 @@ end
 integrate_domain(qs, integrand, domain::EmptySpace, measure, properties...) =
     zero_result(integrand)
 
+integrate_domain(qs, integrand, domain::Point, measure, properties...) =
+    zero_result(integrand)
+
 # function process_domain(qs, integrand, domain::MappedDomain, measure::Lebesgue, properties...)
 #     m = forward_map(domain)
 #     @show m
