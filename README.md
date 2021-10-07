@@ -1,7 +1,7 @@
 # DomainIntegrals.jl
 
 [![Build Status](https://github.com/JuliaApproximation/DomainIntegrals.jl/workflows/CI/badge.svg)](https://github.com/JuliaApproximation/DomainIntegrals.jl/workflows/CI.yml?query=branch%3Amaster)
-[![Coverage Status](https://coveralls.io/repos/github/JuliaApproximation/DomainIntegrals.jl/badge.svg)](https://coveralls.io/github/JuliaApproximation/DomainIntegrals.jl)
+[![Coverage Status](https://codecov.io/gh/JuliaApproximation/DomainIntegrals.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/DomainIntegrals.jl)
 
 
 DomainIntegrals is a package designed to numerically evaluate integrals on
