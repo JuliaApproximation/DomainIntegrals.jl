@@ -8,7 +8,7 @@ A one-form is applied to an argument using the `F(f)` syntax, which itself
 invokes `form(F::OneForm, f)`. The `form` function can be specialized for
 concrete types of `F` and `f`.
 
-The main use cases in `DomainIntegrals.jl` are an `Integral` object and a
+The main use cases in `DomainIntegrals.jl` are a lazy `Integral` object and a
 quadratic form that derives from a bilinear form.
 """
 abstract type OneForm end
@@ -33,7 +33,10 @@ struct Integral <: AbstractIntegral
 end
 
 
-Integral(args...) = Integral(process_arguments(args...)...)
+Integral(f, args...) = Integral(f, process_arguments(args...)...)
+
+Integral(integrand, domain::Domain, measure::Measure, properties::Property...) =
+    Integral(integrand, domain, measure, properties)
 
 
 """

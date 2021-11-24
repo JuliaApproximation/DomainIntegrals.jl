@@ -8,7 +8,7 @@ using IntervalSets, DomainSets
 using CompositeTypes.Display
 
 import Base: convert, checkbounds, length,
-    *, ∘
+    *, ∘, ==
 
 import DomainSets:
     domaintype,

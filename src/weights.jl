@@ -4,6 +4,7 @@ export LebesgueMeasure,
     Lebesgue,
     LebesgueDomain,
     lebesguemeasure,
+    dx,
     LegendreWeight,
     JacobiWeight,
     ChebyshevWeight,
@@ -13,7 +14,10 @@ export LebesgueMeasure,
     HermiteWeight,
     GaussianWeight,
     DiracWeight,
-    point
+    point,
+    jacobi_α,
+    jacobi_β,
+    laguerre_α
 
 
 ####################
@@ -28,6 +32,9 @@ unsafe_weightfun(μ::LebesgueMeasure, x) = one(codomaintype(μ))
 
 islebesguemeasure(m::Measure) = false
 islebesguemeasure(m::LebesgueMeasure) = true
+
+==(μ1::LebesgueMeasure, μ2::LebesgueMeasure) = support(μ1) == support(μ2)
+
 
 "The Lebesgue measure on the space `FullSpace{T}`."
 struct Lebesgue{T} <: LebesgueMeasure{T}
@@ -100,8 +107,14 @@ Base.show(io::IO, μ::LegendreWeight) = print(io, "dx(-1..1)  (Legendre)")
 Display.object_parentheses(μ::LegendreWeight) = true
 
 
+"Supertype of Jacobi weights."
+abstract type AbstractJacobiWeight{T} <: Weight{T} end
+
+==(μ1::AbstractJacobiWeight, μ2::AbstractJacobiWeight) =
+    jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
+
 "The Jacobi weight on the interval `[-1,1]`."
-struct JacobiWeight{T} <: Weight{T}
+struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     α   ::  T
     β   ::  T
 
@@ -129,13 +142,16 @@ Display.object_parentheses(μ::JacobiWeight) = true
 The `Chebyshev` or `ChebyshevT` weight is the measure on `[-1,1]` with the
 Chebyshev weight function `w(x) = 1/√(1-x^2)`.
 """
-struct ChebyshevTWeight{T} <: Weight{T}
+struct ChebyshevTWeight{T} <: AbstractJacobiWeight{T}
 end
 ChebyshevTWeight() = ChebyshevTWeight{Float64}()
 
 const ChebyshevWeight = ChebyshevTWeight
 
 chebyshev_weight_firstkind(x) = 1/sqrt(1-x^2)
+
+jacobi_α(μ::ChebyshevTWeight{T}) where {T} = -one(T)/2
+jacobi_β(μ::ChebyshevTWeight{T}) where {T} = -one(T)/2
 
 similar(μ::ChebyshevTWeight, ::Type{T}) where {T <: Real} = ChebyshevTWeight{T}()
 support(μ::ChebyshevTWeight{T}) where {T} = ChebyshevInterval{T}()
@@ -151,11 +167,14 @@ Display.object_parentheses(μ::ChebyshevTWeight) = true
 The ChebyshevU weight is the measure on `[-1,1]` with the Chebyshev weight
 function of the second kind `w(x) = √(1-x^2).`
 """
-struct ChebyshevUWeight{T} <: Weight{T}
+struct ChebyshevUWeight{T} <: AbstractJacobiWeight{T}
 end
 ChebyshevUWeight() = ChebyshevUWeight{Float64}()
 
 chebyshev_weight_secondkind(x) = sqrt(1-x^2)
+
+jacobi_α(μ::ChebyshevUWeight{T}) where {T} = one(T)/2
+jacobi_β(μ::ChebyshevUWeight{T}) where {T} = one(T)/2
 
 similar(μ::ChebyshevUWeight, ::Type{T}) where {T <: Real} = ChebyshevUWeight{T}()
 support(μ::ChebyshevUWeight{T}) where {T} = ChebyshevInterval{T}()
@@ -191,11 +210,11 @@ end
 
 jacobi_α(μ::LegendreWeight{T}) where {T} = zero(T)
 jacobi_β(μ::LegendreWeight{T}) where {T} = zero(T)
-jacobi_α(μ::ChebyshevTWeight{T}) where {T} = -one(T)/2
-jacobi_β(μ::ChebyshevTWeight{T}) where {T} = -one(T)/2
-jacobi_α(μ::ChebyshevUWeight{T}) where {T} = one(T)/2
-jacobi_β(μ::ChebyshevUWeight{T}) where {T} = one(T)/2
 
+==(μ1::AbstractJacobiWeight, μ2::LegendreWeight) =
+    jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
+==(μ1::LegendreWeight, μ2::AbstractJacobiWeight) =
+    jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
 
 
 "The generalised Laguerre measure on the halfline `[0,∞)`."
@@ -263,3 +282,5 @@ lebesguemeasure(domain::UnitInterval{T}) where {T} = LebesgueUnit{T}()
 lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreWeight{T}()
 lebesguemeasure(domain::FullSpace{T}) where {T} = Lebesgue{T}()
 lebesguemeasure(domain::Domain{T}) where {T} = LebesgueDomain{T}(domain)
+
+dx(domain::Domain) = lebesguemeasure(domain)

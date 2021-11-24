@@ -15,6 +15,7 @@ function test_measures()
     @test support(m2) == UnitInterval()
     @test weightfun(m2, 0.4) == 1
     @test weightfun(m2, 1.4) == 0
+    @test m2 == dx(UnitInterval())
 
     m3 = LegendreWeight()
     @test !isdiscrete(m3)
@@ -26,6 +27,8 @@ function test_measures()
     @test weightfun(m3, -0.4) == 1
     @test weightfun(m3, 1.4) == 0
     @test weightfun(m3, -1.4) == 0
+    @test jacobi_α(m3) == 0
+    @test jacobi_β(m3) == 0
 
     x = 0.5
     m4 = DiracWeight(x)
@@ -61,4 +64,24 @@ function test_measures()
     @test weightfun(m6, 0.4) == exp(-0.4)
     @test weightfun(m6, -0.4) == 0
     @test weightfun(m6, big(0.4)) == exp(-big(0.4))
+
+    m7 = ChebyshevTWeight()
+    @test support(m7) isa ChebyshevInterval
+    @test !isdiscrete(m7)
+    @test iscontinuous(m7)
+    @test !isnormalized(m7)
+    @test domaintype(m7) == Float64
+    @test jacobi_α(m7) == -1/2
+    @test jacobi_β(m7) == -1/2
+    @test m7 == JacobiWeight(-1/2, -1/2)
+
+    m8 = ChebyshevUWeight()
+    @test support(m8) isa ChebyshevInterval
+    @test !isdiscrete(m8)
+    @test iscontinuous(m8)
+    @test !isnormalized(m8)
+    @test domaintype(m8) == Float64
+    @test jacobi_α(m8) == 1/2
+    @test jacobi_β(m8) == 1/2
+    @test m8 == JacobiWeight(1/2, 1/2)
 end
