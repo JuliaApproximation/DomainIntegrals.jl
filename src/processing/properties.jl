@@ -7,7 +7,7 @@ split into several components such that there are no singularities in the
 interior.
 """
 process_properties(qs, integrand, domain, measure, properties...) =
-    (qs, integrand, domain, measure, properties...)
+    (integrand, domain, measure, properties...)
 
 #################
 ## Singularities

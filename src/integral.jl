@@ -138,7 +138,7 @@ function integrate_property(qs::AdaptiveStrategy, integrand, domain, measure, pr
         domains = property_split_domain(domain, property, properties...)
         sum_integrals(qs, integrand, domains, measure, filter_singularities(property, properties...)...)
     else
-        transformed_arguments = process_property(qs, integrand, domain, measure, property, properties...)
+        transformed_arguments = process_properties(qs, integrand, domain, measure, property, properties...)
         integrate_measure(qs, transformed_arguments...)
     end
 end
