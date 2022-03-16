@@ -165,7 +165,7 @@ end
 
 integrate_done(qs, integrand::Integrand, domain, measure, properties...) =
     integrate_done(qs, integrand.fun, domain, measure, properties...)
-integrate_done(qs, integrand::Function, domain, measure, properties...) =
+integrate_done(qs, integrand, domain, measure, properties...) =
     select_quad(qs, integrand, domain, measure, properties...)
 
 # Selection: use a suitable quadrature strategy
