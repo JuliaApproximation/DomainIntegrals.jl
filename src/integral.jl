@@ -43,6 +43,7 @@ end
 
 # associate a domain with a measure: use its support
 associated_domain(μ::Measure) = support(μ)
+associated_domain(μ::DiscreteWeight{T}) where {T} = DummyDiscreteDomain{T}()
 
 # associate a measure with a domain
 # we try to avoid memory allocations, hence LebesgeeSpace{T} is the default
@@ -52,7 +53,6 @@ associated_measure(domain::ChebyshevInterval) = lebesguemeasure(domain)
 associated_measure(domain::UnitInterval) = lebesguemeasure(domain)
 # sometimes the T of an interval is an integer (e.g. in 0..1)
 associated_measure(domain::AbstractInterval{T}) where {T} = Lebesgue{float(T)}()
-
 
 # Process the arguments until there is a domain, a measure and zero or more property objects.
 process_arguments(measure::Measure, properties::Property...) =

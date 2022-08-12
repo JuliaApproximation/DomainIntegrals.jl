@@ -71,6 +71,11 @@ function test_some_integrals()
     @test abs(integral(strategy, x->1, UnitDisk()) - pi) < 1e-5
 end
 
+function test_discrete_measures()
+    m1 = DomainIntegrals.GenericDiscreteWeight([0.2], [0.5])
+    @test integral(exp, m1) == 0.5*exp(0.2)
+end
+
 function test_integrals()
     test_some_integrals()
     test_readme_examples()

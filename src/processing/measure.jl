@@ -12,6 +12,15 @@ function integrate_measure(qs, integrand, domain, δ::DiracWeight, properties...
     I, E
 end
 
+
+"A dummy domain to be associated with a discrete measure, for internal purposes."
+struct DummyDiscreteDomain{T} <: Domain{T} end
+
+function integrate_measure(qs, integrand, domain::DummyDiscreteDomain, μ::DiscreteWeight, properties...)
+    I = sum(w*integrand(x) for (w,x) in zip(weights(μ), points(μ)))
+    I, zero_error(I)
+end
+
 function integrate_measure(qs, integrand, domain, μ::DiscreteWeight, properties...)
     if domain == covering(μ)
         I = sum(w*integrand(x) for (w,x) in zip(weights(μ), points(μ)))
