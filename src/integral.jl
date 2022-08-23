@@ -8,7 +8,7 @@ The suggested quadrature strategy based on the `integral` arguments.
 
 By default, adaptive quadrature is chosen.
 """
-suggestedstrategy(args...) = QuadAdaptive()
+suggestedstrategy(domain::Domain, args...) = QuadAdaptive{prectype(domain)}()
 
 returntype(integrand, ::Type{S}) where {S} = Base.Core.Compiler.return_type(integrand, (S,))
 
