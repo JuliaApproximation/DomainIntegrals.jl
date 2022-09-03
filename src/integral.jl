@@ -46,13 +46,7 @@ associated_domain(μ::Measure) = support(μ)
 associated_domain(μ::DiscreteWeight{T}) where {T} = DummyDiscreteDomain{T}()
 
 # associate a measure with a domain
-# we try to avoid memory allocations, hence LebesgeeSpace{T} is the default
 associated_measure(domain::Domain{T}) where {T} = Lebesgue{T}()
-# these cases have a known allocation-free lebesgue measure
-associated_measure(domain::ChebyshevInterval) = lebesguemeasure(domain)
-associated_measure(domain::UnitInterval) = lebesguemeasure(domain)
-# sometimes the T of an interval is an integer (e.g. in 0..1)
-associated_measure(domain::AbstractInterval{T}) where {T} = Lebesgue{float(T)}()
 
 # Process the arguments until there is a domain, a measure and zero or more property objects.
 process_arguments(measure::Measure, properties::Property...) =
@@ -62,9 +56,17 @@ process_arguments(domain::Domain, properties::Property...) =
 process_arguments(domain::Domain, measure::LebesgueDomain{T}, properties::Property...) where {T} =
     process_arguments(domain ∩ support(measure), Lebesgue{T}(), properties...)
 
-process_arguments(domain::Domain{S}, measure::Measure{T}, properties::Property...) where {S,T} =
-    process_arguments(convert(Domain{promote_type(S,T)}, domain),
-        convert(Measure{promote_type(S,T)}, measure), properties...)
+promote_domain_and_measure(domain::Domain{T}, measure::Measure{T}) where {T} =
+    domain, measure
+function promote_domain_and_measure(domain::Domain{S}, measure::Measure{T}) where {S,T}
+    U = promote_type(S,T)
+    convert(Domain{U}, domain), convert(Measure{U}, measure)
+end
+
+function process_arguments(domain::Domain{S}, measure::Measure{T}, properties::Property...) where {S,T}
+    d, m = promote_domain_and_measure(domain, measure)
+    process_arguments(d, m, properties...)
+end
 
 # all good now
 process_arguments(domain::Domain{T}, measure::Measure{T}, properties::Property...) where {T} =
@@ -116,13 +118,13 @@ integrate(integrand, domain::Domain, measure::Measure, properties::Property...) 
 
 
 integrate_start(qs, integrand, domain, measure, properties...) =
-    integrate_property(qs, Integrand{promote_type(numtype(domain),codomaintype(measure))}(integrand), domain, measure, properties...)
+    integrate_property(qs, FunIntegrand{promote_type(numtype(domain),codomaintype(measure))}(integrand), domain, measure, properties...)
 
-integrate_start(qs, integrand::AbstractIntegrand, domain, measure, properties...) =
+integrate_start(qs, integrand::Integrand, domain, measure, properties...) =
     integrate_property(qs, integrand, domain, measure, properties...)
 
 
-function sum_integrals(qs, integrand::AbstractIntegrand, domains, measure, properties...)
+function sum_integrals(qs, integrand::Integrand, domains, measure, properties...)
     Itot, Etot = zero_result(integrand)
     for domain in domains
         I,E = integrate_start(qs, integrand, domain, measure, filter_singularities(properties...)...)
@@ -163,7 +165,7 @@ function integrate_domain(qs, integrand, domain, measure, properties...)
     end
 end
 
-integrate_done(qs, integrand::Integrand, domain, measure, properties...) =
+integrate_done(qs, integrand::FunIntegrand, domain, measure, properties...) =
     integrate_done(qs, integrand.fun, domain, measure, properties...)
 integrate_done(qs, integrand, domain, measure, properties...) =
     select_quad(qs, integrand, domain, measure, properties...)

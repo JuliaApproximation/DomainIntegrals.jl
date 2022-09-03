@@ -52,7 +52,7 @@ function test_some_integrals()
         DomainIntegrals.mappedmeasure(testmap_m, testmap_μ)) - I1)  < 1e-6
 
     @test integrate(cos, EmptySpace()) === (0.0, 0.0)
-    @test integrate(DomainIntegrals.Integrand{ComplexF64}(cos), EmptySpace()) === (0.0+0.0im, 0.0)
+    @test integrate(DomainIntegrals.FunIntegrand{ComplexF64}(cos), EmptySpace()) === (0.0+0.0im, 0.0)
     @inferred integrate(cos, EmptySpace())
 
     # product weights

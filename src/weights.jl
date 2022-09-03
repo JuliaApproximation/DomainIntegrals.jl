@@ -60,9 +60,12 @@ Base.show(io::IO, μ::LebesgueUnit) = print(io, "dx(0..1)")
 
 
 "Lebesgue measure supported on a general domain."
-struct LebesgueDomain{T} <: LebesgueMeasure{T}
-    domain  ::  Domain{T}
+struct LebesgueDomain{T,D} <: LebesgueMeasure{T}
+    domain  ::  D
 end
+LebesgueDomain(domain::Domain{T}) where {T} = LebesgueDomain{T}(domain)
+LebesgueDomain{T}(domain::D) where {T,D} = LebesgueDomain{T,D}(domain)
+
 
 similar(μ::LebesgueDomain, ::Type{T}) where {T} = LebesgueDomain{T}(μ.domain)
 support(m::LebesgueDomain) = m.domain
@@ -282,5 +285,8 @@ lebesguemeasure(domain::UnitInterval{T}) where {T} = LebesgueUnit{T}()
 lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreWeight{T}()
 lebesguemeasure(domain::FullSpace{T}) where {T} = Lebesgue{T}()
 lebesguemeasure(domain::Domain{T}) where {T} = LebesgueDomain{T}(domain)
+# avoid propagating Int for intervals with integer eltype
+lebesguemeasure(domain::AbstractInterval{T}) where {T<:Integer} =
+    lebesguemeasure(convert(Domain{float(T)}, domain))
 
 dx(domain::Domain) = lebesguemeasure(domain)

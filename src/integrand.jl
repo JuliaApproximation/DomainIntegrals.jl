@@ -1,47 +1,47 @@
 
 "Supertype of an integrand which evaluates to `T`."
-abstract type AbstractIntegrand{T} end
+abstract type Integrand{T} end
 
 zero_result(f) = 0.0, 0.0
-zero_result(integrand::AbstractIntegrand{T}) where {T} = zero(T), zero(real(T))
+zero_result(integrand::Integrand{T}) where {T} = zero(T), zero(real(T))
 
-convert(::Type{AbstractIntegrand{T}}, f::AbstractIntegrand{T}) where {T} = f
-convert(::Type{AbstractIntegrand{T}}, f::AbstractIntegrand{S}) where {S,T} =
+convert(::Type{Integrand{T}}, f::Integrand{T}) where {T} = f
+convert(::Type{Integrand{T}}, f::Integrand{S}) where {S,T} =
     similar_integrand(f, T)
 
-Base.complex(f::AbstractIntegrand{T}) where {T} =
-    convert(AbstractIntegrand{complex(T)}, F)
+Base.complex(f::Integrand{T}) where {T} =
+    convert(Integrand{complex(T)}, F)
 
-(∘)(f::AbstractIntegrand, g) = integrand_compose(f, g, f.fun)
-(∘)(f::AbstractIntegrand, g::IdentityMap) = f
+(∘)(f::Integrand, g) = integrand_compose(f, g, f.fun)
+(∘)(f::Integrand, g::IdentityMap) = f
 
-(*)(f, g::AbstractIntegrand{T}) where {T} = integrand_times(f, g, g.fun)
-(*)(f::Map, g::AbstractIntegrand{T}) where {T} = integrand_times(t->applymap(f,t), g, g.fun)
-(*)(f::ConstantMap, g::AbstractIntegrand) = constant(f) * g
+(*)(f, g::Integrand{T}) where {T} = integrand_times(f, g, g.fun)
+(*)(f::Map, g::Integrand{T}) where {T} = integrand_times(t->applymap(f,t), g, g.fun)
+(*)(f::ConstantMap, g::Integrand) = constant(f) * g
 
 
 "Representation of an integrand function."
-struct Integrand{T,F} <: AbstractIntegrand{T}
+struct FunIntegrand{T,F} <: Integrand{T}
     fun ::  F
 end
 
-Integrand{T}(fun::F) where {T,F} = Integrand{T,F}(fun)
-Integrand{T}(F::Integrand) where {T} = Integrand{T}(F.fun)
+FunIntegrand{T}(fun::F) where {T,F} = FunIntegrand{T,F}(fun)
+FunIntegrand{T}(F::FunIntegrand) where {T} = FunIntegrand{T}(F.fun)
 
-similar_integrand(F::Integrand, ::Type{T}) where {T} = Integrand{T}(F)
+similar_integrand(F::FunIntegrand, ::Type{T}) where {T} = FunIntegrand{T}(F)
 
-integrand_compose(f::Integrand{T}, g, fun) where {T} = Integrand{T}(t -> fun(g(t)))
+integrand_compose(f::FunIntegrand{T}, g, fun) where {T} = FunIntegrand{T}(t -> fun(g(t)))
 
-integrand_times(f::Function, g::Integrand{T}, fun) where {T} =
-    Integrand{T}(t -> f(t)*fun(t))
-integrand_times(c::S, g::Integrand{T}, fun) where {T,S<:Number} =
-    Integrand{promote_type(S,T)}(t -> c*fun(t))
+integrand_times(f::Function, g::FunIntegrand{T}, fun) where {T} =
+    FunIntegrand{T}(t -> f(t)*fun(t))
+integrand_times(c::S, g::FunIntegrand{T}, fun) where {T,S<:Number} =
+    FunIntegrand{promote_type(S,T)}(t -> c*fun(t))
 
-(f::Integrand)(x...) = f.fun(x...)
+(f::FunIntegrand)(x...) = f.fun(x...)
 
 
 "An integrand that logs any transformations which are applied to it."
-struct TransformationLogIntegrand{T} <: AbstractIntegrand{T}
+struct TransformationLogIntegrand{T} <: Integrand{T}
     fun
     prefactor
 end
