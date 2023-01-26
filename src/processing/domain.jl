@@ -63,7 +63,8 @@ function process_domain(qs, integrand, domain::Domain, measure::Lebesgue, proper
     if has_integration_domain(domain)
         paramdomain = integration_domain(domain)
         fmap = mapfrom_integration_domain(domain)
-        (DomainSets.diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
+        process_domain(qs, diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
+        # (diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
     else
         (integrand, domain, measure, properties...)
     end
@@ -81,6 +82,12 @@ integrate_domain(qs, integrand, domain::Point, measure, properties...) =
 #     @show m
 #     process_domain(qs, (t->jacdet(m,t)) * (integrand ∘ m), superdomain(domain), measure, properties...)
 # end
+
+# TODO: implement triangles in terms of UnitSimplex, rather than the other way around
+function process_domain(qs, integrand, domain::EuclideanUnitSimplex{2,T}, measure::Lebesgue, properties...) where {T}
+    m = AffineMap(SA[-1 zero(T); 0 1], SA[one(T); 0])
+    process_domain(qs, diffvolume(m) * (integrand ∘ m), LowerRightTriangle(zero(T),one(T)), measure, properties...)
+end
 
 function process_domain(qs, integrand, domain::LowerRightTriangle{T}, measure::Lebesgue, properties...) where {T}
     a = domain.a

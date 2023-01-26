@@ -155,6 +155,23 @@ function unsafe_weight(μ::DiscreteWeight, i)
 end
 
 
+####################
+## Generic weights
+####################
+
+"A generic continuous weight function."
+struct GenericWeight{T,F,S} <: Weight{T}
+    fun     ::  F
+    support ::  S
+end
+
+GenericWeight(fun, support = ChebyshevInterval()) =
+    GenericWeight{eltype(support)}(fun, support)
+GenericWeight{T}(fun::F, support::S) where {T,F,S} =
+    GenericWeight{T,F,S}(fun, support)
+
+support(μ::GenericWeight) = μ.support
+unsafe_weightfun(μ::GenericWeight, x) = μ.fun(x)
 
 "A generic discrete weight that stores points and weights."
 struct GenericDiscreteWeight{T,P,W} <: DiscreteWeight{T}
