@@ -223,6 +223,9 @@ support(m::MappedWeight) = forward_map(m).(support(supermeasure(m)))
 
 unsafe_weightfun(m::MappedWeight, x) = unsafe_weightfun(supermeasure(m), inverse(forward_map(m), x)) / jacdet(forward_map(m), x)
 
+"Is the given measure the map of another measure?"
+ismappedmeasure(m::Measure) = false
+ismappedmeasure(m::MappedWeight) = true
 
 ####################
 ## Product weights

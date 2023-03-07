@@ -11,7 +11,7 @@ struct LowerRightTriangle{T} <: Triangle{T}
 end
 
 DomainSets.indomain(x, d::LowerRightTriangle) =
-   (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[1] <= x[2])
+   (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[2] <= x[1])
 
 "The triangle above the diagonal of a square `[a,b] × [a,b]`."
 struct UpperRightTriangle{T} <: Triangle{T}
@@ -20,6 +20,6 @@ struct UpperRightTriangle{T} <: Triangle{T}
 end
 
 DomainSets.indomain(x, d::UpperRightTriangle) =
-   (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[1] >= x[2])
+   (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[2] >= x[1])
 
 const StaticTypes = DomainSets.StaticTypes
