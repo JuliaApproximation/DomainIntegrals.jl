@@ -23,3 +23,21 @@ DomainSets.indomain(x, d::UpperRightTriangle) =
    (x[1] >= d.a) && (x[1] <= d.b) && (x[2] >= d.a) && (x[2] <= d.b) && (x[2] >= x[1])
 
 const StaticTypes = DomainSets.StaticTypes
+
+"""
+The Duffy transform maps the unit square to the unit simplex.
+
+It does so by collapsing the rightmost edge onto the x-axis.
+"""
+struct DuffyTransform{T} <: DomainSets.Map{SVector{2,T}}
+end
+
+DuffyTransform() = DuffyTransform{Float64}()
+
+DomainSets.applymap(::DuffyTransform{T}, x) where T =
+   SVector{2,T}(x[1],(1-x[1])*x[2])
+
+DomainSets.jacobian(::DuffyTransform{T}, x) where T = SA{T}[1 0; -x[2] 1-x[1]]
+DomainSets.jacdet(::DuffyTransform{T}, x) where T = one(T)-x[1]
+DomainSets.mapsize(::DuffyTransform) = (2,2)
+DomainSets.diffvolume(::DuffyTransform) = x -> 1-x[1]
