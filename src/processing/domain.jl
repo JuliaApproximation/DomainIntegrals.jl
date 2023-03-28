@@ -1,18 +1,55 @@
 
 ## Process domains
 
+"A canonical domain for the purposes of evaluating integrals."
+struct CanonicalInt <: DomainSets.CanonicalType
+end
+
+import DomainSets:
+    canonicaldomain,
+    mapfrom_canonical,
+	mapto_canonical
+
 "Is the domain associated with a simpler domain for numerical integration?"
-has_integration_domain(d) = hasparameterization(d)
+has_integration_domain(d) = hascanonicaldomain(CanonicalInt(), d)
+
 "Return the integration domain associated with `d`."
-integration_domain(d) = parameterdomain(d)
+integration_domain(d) = canonicaldomain(CanonicalInt(), d)
+
 "Return the map from the integration domain of `d` to `d`."
-mapfrom_integration_domain(d) = mapfrom_parameterdomain(d)
+mapfrom_integration_domain(d) = mapfrom_canonical(CanonicalInt(), d)
+mapto_integration_domain(d) = mapto_canonical(CanonicalInt(), d)
+
+
+# by default we use the parameter domain
+canonicaldomain(::CanonicalInt, d) = parameterdomain(d)
+mapfrom_canonical(::CanonicalInt, d) = mapfrom_parameterdomain(d)
+# by default one only has to implement mapfrom
+mapto_canonical(::CanonicalInt, d) = leftinverse(mapfrom_canonical(CanonicalInt(), d))
+
+# we intercept product domains, so that CanonicalInt is passed on to its factors
+canonicaldomain(::CanonicalInt, d::ProductDomain) =
+	any(map(has_integration_domain, factors(d))) ?
+		productdomain(map(integration_domain, factors(d))...) :
+		d
+mapto_canonical(::CanonicalInt, d::ProductDomain) =
+	DomainSets.matching_product_map(d, map(mapto_integration_domain, factors(d)))
+mapfrom_canonical(::CanonicalInt, d::ProductDomain) =
+	DomainSets.matching_product_map(d, map(mapfrom_integration_domain, factors(d)))
+
+# same for mapped domains
+canonicaldomain(ctype::CanonicalInt, d::DomainSets.AbstractMappedDomain) =
+	canonicaldomain(ctype, superdomain(d))
+mapfrom_canonical(ctype::CanonicalInt, d::DomainSets.AbstractMappedDomain) =
+	forward_map(d) ∘ mapfrom_canonical(ctype, superdomain(d))
+mapto_canonical(ctype::CanonicalInt, d::DomainSets.AbstractMappedDomain) =
+	mapto_canonical(ctype, superdomain(d)) ∘ inverse_map(d)
+
 
 # Avoid the affine map for intervals and cubes
-has_integration_domain(d::Interval) = false
-integration_domain(d::Interval) = d
-has_integration_domain(d::DomainSets.HyperRectangle) = false
-integration_domain(d::DomainSets.HyperRectangle) = d
+canonicaldomain(::CanonicalInt, d::Interval) = d
+canonicaldomain(::CanonicalInt, d::DomainSets.HyperRectangle) = d
+
 
 "Does the integration domain naturally split into subdomains?"
 domain_splits(domain) = false
@@ -72,7 +109,6 @@ function process_domain(qs, integrand, domain::Domain, measure::Lebesgue, proper
         paramdomain = integration_domain(domain)
         fmap = mapfrom_integration_domain(domain)
         process_domain(qs, diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
-        # (diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
     else
         (integrand, domain, measure, properties...)
     end
@@ -85,21 +121,16 @@ integrate_domain(qs, integrand, domain::EmptySpace, measure, properties...) =
 integrate_domain(qs, integrand, domain::Point, measure, properties...) =
     zero_result(integrand)
 
-# function process_domain(qs, integrand, domain::MappedDomain, measure::Lebesgue, properties...)
-#     m = forward_map(domain)
-#     process_domain(qs, (t->jacdet(m,t)) * (integrand ∘ m), superdomain(domain), measure, properties...)
-# end
 
 # enable integration over the unit simplex
-has_integration_domain(::EuclideanUnitSimplex{2}) = true
-integration_domain(d::EuclideanUnitSimplex{2,T}) where T = UnitSquare{T}()
-mapfrom_integration_domain(d::EuclideanUnitSimplex{2,T}) where T =
+canonicaldomain(::CanonicalInt, d::EuclideanUnitSimplex{2,T}) where T = UnitSquare{T}()
+mapfrom_canonical(::CanonicalInt, d::EuclideanUnitSimplex{2,T}) where T =
     DuffyTransform{T}()
 
+
 # map upper and lower right triangles to the unit simplex
-has_integration_domain(::LowerRightTriangle) = true
-integration_domain(::LowerRightTriangle{T}) where T = EuclideanUnitSimplex{2,T}()
-function mapfrom_integration_domain(d::LowerRightTriangle{T}) where T
+canonicaldomain(::CanonicalInt, ::LowerRightTriangle{T}) where T = EuclideanUnitSimplex{2,T}()
+function mapfrom_canonical(::CanonicalInt, d::LowerRightTriangle{T}) where T
     scalefactor = d.b-d.a
     # from the unit simplex to the lower right triangle in the unit square
     m1 = AffineMap(SA{T}[-1 0; 0 1], SA{T}[1; 0])
@@ -108,9 +139,8 @@ function mapfrom_integration_domain(d::LowerRightTriangle{T}) where T
     m2 ∘ m1
 end
 
-has_integration_domain(::UpperRightTriangle) = true
-integration_domain(::UpperRightTriangle{T}) where T = EuclideanUnitSimplex{2,T}()
-function mapfrom_integration_domain(d::UpperRightTriangle{T}) where T
+canonicaldomain(::CanonicalInt, ::UpperRightTriangle{T}) where T = EuclideanUnitSimplex{2,T}()
+function mapfrom_canonical(::CanonicalInt, d::UpperRightTriangle{T}) where T
     scalefactor = d.b-d.a
     m1 = AffineMap(SA{T}[1 0; 0 -1], SA{T}[0; 1])
     m2 = AffineMap(SA{T}[scalefactor 0; 0 scalefactor], SA{T}[d.a; d.a])
