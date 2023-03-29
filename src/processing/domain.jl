@@ -49,6 +49,10 @@ mapto_canonical(ctype::CanonicalInt, d::DomainSets.AbstractMappedDomain) =
 # Avoid the affine map for intervals and cubes
 canonicaldomain(::CanonicalInt, d::Interval) = d
 canonicaldomain(::CanonicalInt, d::DomainSets.HyperRectangle) = d
+mapfrom_canonical(::CanonicalInt, d::Interval) = IdentityMap{eltype(d)}()
+mapto_canonical(::CanonicalInt, d::Interval) = IdentityMap{eltype(d)}()
+mapfrom_canonical(::CanonicalInt, d::DomainSets.HyperRectangle) = IdentityMap{eltype(d)}()
+mapto_canonical(::CanonicalInt, d::DomainSets.HyperRectangle) = IdentityMap{eltype(d)}()
 
 
 "Does the integration domain naturally split into subdomains?"

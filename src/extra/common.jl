@@ -34,6 +34,9 @@ end
 
 DuffyTransform() = DuffyTransform{Float64}()
 
+DomainSets.similarmap(::DuffyTransform, ::Type{SVector{2,T}}) where T =
+   DuffyTransform{T}()
+
 DomainSets.applymap(::DuffyTransform{T}, x) where T =
    SVector{2,T}(x[1],(1-x[1])*x[2])
 
