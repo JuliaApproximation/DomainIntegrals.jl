@@ -2,8 +2,10 @@
 "Supertype of an integrand which evaluates to `T`."
 abstract type Integrand{T} end
 
-zero_result(f) = 0.0, 0.0
-zero_result(integrand::Integrand{T}) where {T} = zero(T), zero(real(T))
+zero_result(f) = zero_result(f, Float64)
+zero_result(integrand::Integrand{T}) where {T} = zero_result(integrand, T)
+
+zero_result(f, ::Type{T}) where T = zero(T), zero(real(T))
 
 convert(::Type{Integrand{T}}, f::Integrand{T}) where {T} = f
 convert(::Type{Integrand{T}}, f::Integrand{S}) where {S,T} =
