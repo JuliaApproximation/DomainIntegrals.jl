@@ -16,7 +16,8 @@ import DomainSets:
     prectype,
     numtype,
     forward_map,
-    components
+    components,
+    factors
 
 using DomainSets: ×,
     EmptySpace, FullSpace,

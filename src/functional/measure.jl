@@ -237,6 +237,7 @@ struct ProductWeight{T,M} <: Weight{T}
 end
 
 components(m::ProductWeight) = m.weights
+factors(m::ProductWeight) = components(m)
 
 function ProductWeight(weights...)
     T = Tuple{map(domaintype, weights)...}
