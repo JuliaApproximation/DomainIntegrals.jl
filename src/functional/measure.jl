@@ -213,8 +213,16 @@ MappedWeight{T}(map, weight) where {T} =
 
 export mappedmeasure
 "Map the weight using the given map."
-mappedmeasure(map, weight::Weight) = MappedWeight(map, weight)
-mappedmeasure(map, weight::MappedWeight) = MappedWeight(map ∘ forward_map(weight), supermeasure(weight))
+mappedmeasure(map, weight) = mappedmeasure1(map, weight)
+
+# mappedmeasure1 is meant for dispatch on the first argument without ambiguity
+mappedmeasure1(map, weight) = mappedmeasure2(map, weight)
+mappedmeasure1(map::IdentityMap, weight) = weight
+# mappedmeasure2 is meant for dispatch on the second argument
+mappedmeasure2(map, weight::Weight) = MappedWeight(map, weight)
+mappedmeasure2(map, weight::MappedWeight) =
+    mappedmeasure(map ∘ forward_map(weight), supermeasure(weight))
+
 
 forward_map(m::MappedWeight) = m.fmap
 supermeasure(m::MappedWeight) = m.weight
