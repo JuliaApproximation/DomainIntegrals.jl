@@ -10,6 +10,7 @@ include("test_gauss.jl")
 
 @testset "Measures" begin
     test_measures()
+    test_discrete_measures()
 end
 
 @testset "Quadrature rules" begin

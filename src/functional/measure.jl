@@ -154,6 +154,10 @@ function unsafe_weight(μ::DiscreteWeight, i)
     @inbounds weights(μ)[i]
 end
 
+# convenience: x, w = μ returns the points and weights
+Base.iterate(μ::DiscreteWeight) = (points(μ), Val(:W))
+Base.iterate(μ::DiscreteWeight, ::Val{:W}) = (weights(μ), Val(:done))
+Base.iterate(μ::DiscreteWeight, ::Val{:done}) = nothing
 
 ####################
 ## Generic weights

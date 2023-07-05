@@ -85,3 +85,14 @@ function test_measures()
     @test jacobi_β(m8) == 1/2
     @test m8 == JacobiWeight(1/2, 1/2)
 end
+
+function test_discrete_measures()
+    x = [0.5, 1.0]
+    w = [0.2, 0.8]
+    μ = DomainIntegrals.GenericDiscreteWeight(x, w)
+    @test isnormalized(μ)
+    @test !isuniform(μ)
+    x2, w2 = μ
+    @test norm(x-x2) ≈ 0
+    @test norm(w-w2) ≈ 0
+end
