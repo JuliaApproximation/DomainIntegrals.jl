@@ -1,7 +1,7 @@
 name = "DomainIntegrals"
 uuid = "cc6bae93-f070-4015-88fd-838f9505a86c"
 authors = ["Daan Huybrechs <daan.huybrechs@kuleuven.be>"]
-version = "0.4.5"
+version = "0.4.4"
 
 [deps]
 CompositeTypes = "b152e2b5-7a66-4b01-a709-34e65c35f657"
