@@ -79,17 +79,17 @@ integrate(qs::ChebyshevIntervalRule{T}, integrand) where {T} =
 integrate(qs::HalfLineRule{T}, integrand) where {T} =
     integrate(qs, integrand, HalfLine{T}())
 integrate(qs::RealLineRule{T}, integrand) where {T} =
-    integrate(qs, integrand, FullSpace{T}())
+    integrate(qs, integrand, RealLine{T}())
 
 ## The use of generators
 integrate(gen::Base.Generator, args...) =
     integrate(process_generator(gen)..., args...)
 # - catch something like f(x) for x in domain
-process_generator(gen::Base.Generator{<:Domain}) = (gen.f, gen.iter)
+process_generator(gen::Base.Generator{<:AnyDomain}) = (gen.f, gen.iter)
 # - catch something like f(x,y) for x in domain1, y in domain2
 process_generator(gen::Base.Generator{<:Base.Iterators.ProductIterator}) =
     process_generator(gen, gen.iter.iterators)
-function process_generator(gen, iterators::Tuple{Vararg{Domain}})
+function process_generator(gen, iterators::Tuple{Vararg{AnyDomain}})
     domain = productdomain(iterators...)
     dims = map(dimension, iterators)
     (gen.f, domain)
@@ -261,7 +261,7 @@ function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::Lebe
 end
 
 # Make sure that a real line rule is applied to a real line integral
-function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::LebesgueMeasure, properties...)
+function apply_quad(qs::RealLineRule, integrand, domain::RealLine, measure::LebesgueMeasure, properties...)
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))

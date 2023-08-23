@@ -161,5 +161,5 @@ integrate_measure(qs::BestRule, integrand, domain::ChebyshevInterval, μ::Jacobi
 integrate_measure(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreWeight{T}, properties...) where {T} =
     integrate_measure(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, Lebesgue{T}(), properties...)
 
-integrate_measure(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteWeight{T}, properties...) where {T} =
+integrate_measure(qs::BestRule, integrand, domain::Union{FullSpace{T},RealLine{T}}, μ::HermiteWeight{T}, properties...) where {T} =
     integrate_measure(Q_GaussHermite(qs.n), integrand, domain, Lebesgue{T}(), properties...)
