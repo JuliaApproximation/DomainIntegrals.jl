@@ -1,6 +1,9 @@
 
 ## Process measures
 
+integrate_measure(qs, integrand, domain, μ::LebesgueDomain{T}, properties...) where T =
+    integrate_measure(qs, integrand, domain ∩ support(μ), Lebesgue{T}(), properties...)
+
 function integrate_measure(qs, integrand, domain, δ::DiracWeight, properties...)
     x = point(δ)
     if x ∈ domain
