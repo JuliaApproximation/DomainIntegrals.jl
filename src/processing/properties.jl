@@ -81,7 +81,7 @@ end
 
 "Split the domain according to a singularity at the point `x`."
 function splitdomain_point(x, domain::AbstractInterval)
-    T = promote_type(typeof(x),prectype(domain))
+    T = promote_type(typeof(x),prectype(AsDomain(domain)))
     tol = tolerance(T)
     a, b = extrema(domain)
     if (x > a+tol) && (x < b-tol)
@@ -114,7 +114,7 @@ splitdomain_sing(sing::SingularDiagonal, domain) =
 splitdomain_diagonal(domain::ProductDomain) = splitdomain_diagonal(domain, components(domain)...)
 
 function splitdomain_diagonal(domain::ProductDomain, domain1::AbstractInterval, domain2::AbstractInterval)
-    T = prectype(domain)
+    T = prectype(AsDomain(domain))
     diff1 = domain1 \ domain2
     diff2 = domain2 \ domain1
     overlap = domain1 ∩ domain2

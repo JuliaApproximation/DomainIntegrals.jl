@@ -8,7 +8,7 @@ The suggested quadrature strategy based on the `integral` arguments.
 
 By default, adaptive quadrature is chosen.
 """
-suggestedstrategy(domain, args...) = QuadAdaptive{prectype(domain)}()
+suggestedstrategy(domain, args...) = QuadAdaptive{prectype(AsDomain(domain))}()
 
 returntype(integrand, ::Type{S}) where {S} = Base.Core.Compiler.return_type(integrand, (S,))
 
@@ -118,7 +118,7 @@ integrate(qs::QuadratureStrategy, integrand, args...) =
 
 
 integrate_start(qs, integrand, domain, measure, properties...) =
-    integrate_property(qs, FunIntegrand{promote_type(numtype(domain),codomaintype(measure))}(integrand), domain, measure, properties...)
+    integrate_property(qs, FunIntegrand{promote_type(numtype(AsDomain(domain)),codomaintype(measure))}(integrand), domain, measure, properties...)
 
 integrate_start(qs, integrand::Integrand, domain, measure, properties...) =
     integrate_property(qs, integrand, domain, measure, properties...)
@@ -161,7 +161,11 @@ function integrate_domain(qs, integrand, domain, measure, properties...)
         sum_integrals(qs, integrand, domains, measure, properties...)
     else
         transformed_arguments = process_domain(qs, integrand, domain, measure, properties...)
-        integrate_done(qs, transformed_arguments...)
+        if domain_splits(transformed_arguments[2])
+            integrate_domain(qs, transformed_arguments...)
+        else
+            integrate_done(qs, transformed_arguments...)
+        end
     end
 end
 
@@ -191,7 +195,7 @@ fallback_integrate(qs, integrand, domain, measure, properties...) =
 # For quadgk, we only know how to compute intervals
 function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::LebesgueMeasure, properties...)
     if isempty(domain)
-        zero_result(integrand, prectype(domain))
+        zero_result(integrand, prectype(AsDomain(domain)))
     else
         quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
     end

@@ -21,6 +21,7 @@ import DomainSets:
 
 using DomainSets: ×,
     EmptySpace, FullSpace,
+    domain_prectype, domain_numtype,
     euclideandimension
 
 

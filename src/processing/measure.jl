@@ -75,7 +75,7 @@ end
 
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
-function process_measure(qs::AdaptiveStrategy, integrand, domain::FullSpace{T}, measure::HermiteWeight{T}, properties...) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::Union{RealLine{T},FullSpace{T}}, measure::HermiteWeight{T}, properties...) where {T}
     U = sqrt(-log(eps(T)))
     (hermite_weightfun * integrand, -U..U, Lebesgue{T}(), properties...)
 end
@@ -123,7 +123,7 @@ function process_measure(qs::AdaptiveStrategy, integrand, domain::AbstractInterv
 end
 
 function measure_fetch_transformations(qs, domain, weight, properties...)
-    T = promote_type(numtype(domain),numtype(weight))
+    T = promote_type(numtype(AsDomain(domain)),numtype(weight))
     I = TransformationLogIntegrand{T}()
     I_trans, domain_trans, weight_trans = process_measure(qs, I, domain, weight)
     I_trans.prefactor, I_trans.fun, domain_trans, weight_trans
