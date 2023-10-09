@@ -4,7 +4,7 @@ using QuadGK, LinearAlgebra
 using GaussQuadrature, FastGaussQuadrature, HCubature
 
 using StaticArrays
-using DomainSetsCore, IntervalSets, DomainSets
+using IntervalSets, DomainSets
 using CompositeTypes.Display
 
 import Base: convert, checkbounds, length,
