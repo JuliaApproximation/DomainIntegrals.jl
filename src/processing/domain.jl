@@ -1,6 +1,10 @@
 
 ## Process domains
 
+using DomainSets:
+	simplifies,
+	simplify
+
 "A canonical domain for the purposes of evaluating integrals."
 struct CanonicalInt <: DomainSets.CanonicalType
 end
@@ -108,14 +112,20 @@ function process_domain(qs, integrand, domain::DomainSets.TupleProductDomain, me
     error("Don't know how to integrate on a tuple product domain.")
 end
 
-function process_domain(qs, integrand, domain::Domain, measure::Lebesgue, properties...)
-    if has_integration_domain(domain)
-        paramdomain = integration_domain(domain)
-        fmap = mapfrom_integration_domain(domain)
-        process_domain(qs, diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{eltype(paramdomain)}(), properties...)
-    else
-        (integrand, domain, measure, properties...)
-    end
+function process_domain(qs, integrand, domain, measure::Lebesgue, properties...)
+	# first simplify the domain
+	if simplifies(domain)
+		process_domain(qs, integrand, simplify(domain), measure, properties...)
+	else
+		# next find a parametric description of the domain
+	    if has_integration_domain(domain)
+	        paramdomain = integration_domain(domain)
+	        fmap = mapfrom_integration_domain(domain)
+	        process_domain(qs, diffvolume(fmap) * (integrand ∘ fmap), paramdomain, Lebesgue{domaineltype(paramdomain)}(), properties...)
+	    else
+	        (integrand, domain, measure, properties...)
+	    end
+	end
 end
 
 

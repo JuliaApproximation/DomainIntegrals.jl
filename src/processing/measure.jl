@@ -1,6 +1,9 @@
 
 ## Process measures
 
+integrate_measure(qs, integrand, domain, μ::LebesgueDomain{T}, properties...) where T =
+    integrate_measure(qs, integrand, domain ∩ support(μ), Lebesgue{T}(), properties...)
+
 function integrate_measure(qs, integrand, domain, δ::DiracWeight, properties...)
     x = point(δ)
     if x ∈ domain
@@ -72,7 +75,7 @@ end
 
 
 # Truncate an infinite domain to a finite one for numerical evaluation of Hermite integrals
-function process_measure(qs::AdaptiveStrategy, integrand, domain::FullSpace{T}, measure::HermiteWeight{T}, properties...) where {T}
+function process_measure(qs::AdaptiveStrategy, integrand, domain::Union{RealLine{T},FullSpace{T}}, measure::HermiteWeight{T}, properties...) where {T}
     U = sqrt(-log(eps(T)))
     (hermite_weightfun * integrand, -U..U, Lebesgue{T}(), properties...)
 end
@@ -120,7 +123,7 @@ function process_measure(qs::AdaptiveStrategy, integrand, domain::AbstractInterv
 end
 
 function measure_fetch_transformations(qs, domain, weight, properties...)
-    T = promote_type(numtype(domain),numtype(weight))
+    T = promote_type(numtype(AsDomain(domain)),numtype(weight))
     I = TransformationLogIntegrand{T}()
     I_trans, domain_trans, weight_trans = process_measure(qs, I, domain, weight)
     I_trans.prefactor, I_trans.fun, domain_trans, weight_trans
@@ -161,5 +164,5 @@ integrate_measure(qs::BestRule, integrand, domain::ChebyshevInterval, μ::Jacobi
 integrate_measure(qs::BestRule, integrand, domain::HalfLine, μ::LaguerreWeight{T}, properties...) where {T} =
     integrate_measure(Q_GaussLaguerre(qs.n, μ.α), integrand, domain, Lebesgue{T}(), properties...)
 
-integrate_measure(qs::BestRule, integrand, domain::FullSpace{T}, μ::HermiteWeight{T}, properties...) where {T} =
+integrate_measure(qs::BestRule, integrand, domain::Union{FullSpace{T},RealLine{T}}, μ::HermiteWeight{T}, properties...) where {T} =
     integrate_measure(Q_GaussHermite(qs.n), integrand, domain, Lebesgue{T}(), properties...)

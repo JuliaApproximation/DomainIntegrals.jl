@@ -30,7 +30,7 @@ function test_gausshermite()
     n = 5
     qs = Q_GaussHermite(n)
     I = integral(x->cos(x)*exp(-x^2), -5..5)
-    @test abs(integral(qs, cos, DomainSets.FullSpace{Float64}()) - I) < 1e-5
+    @test abs(integral(qs, cos, RealLine{Float64}()) - I) < 1e-5
     @test abs(integral(BestRule(n), cos, HermiteWeight()) - I) < 1e-5
 end
 

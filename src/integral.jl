@@ -8,7 +8,7 @@ The suggested quadrature strategy based on the `integral` arguments.
 
 By default, adaptive quadrature is chosen.
 """
-suggestedstrategy(domain::Domain, args...) = QuadAdaptive{prectype(domain)}()
+suggestedstrategy(domain, args...) = QuadAdaptive{prectype(AsDomain(domain))}()
 
 returntype(integrand, ::Type{S}) where {S} = Base.Core.Compiler.return_type(integrand, (S,))
 
@@ -46,15 +46,7 @@ associated_domain(μ::Measure) = support(μ)
 associated_domain(μ::DiscreteWeight{T}) where {T} = DummyDiscreteDomain{T}()
 
 # associate a measure with a domain
-associated_measure(domain::Domain{T}) where {T} = Lebesgue{T}()
-
-# Process the arguments until there is a domain, a measure and zero or more property objects.
-process_arguments(measure::Measure, properties::Property...) =
-    process_arguments(associated_domain(measure), measure, properties...)
-process_arguments(domain::Domain, properties::Property...) =
-    process_arguments(domain, associated_measure(domain), properties...)
-process_arguments(domain::Domain, measure::LebesgueDomain{T}, properties::Property...) where {T} =
-    process_arguments(domain ∩ support(measure), Lebesgue{T}(), properties...)
+associated_measure(domain) = Lebesgue{domaineltype(domain)}()
 
 promote_domain_and_measure(domain::Domain{T}, measure::Measure{T}) where {T} =
     domain, measure
@@ -63,13 +55,21 @@ function promote_domain_and_measure(domain::Domain{S}, measure::Measure{T}) wher
     convert(Domain{U}, domain), convert(Measure{U}, measure)
 end
 
+
+# Process the arguments until there is a domain (not necessarily of Domain type),
+# a measure and zero or more property objects.
+process_arguments(measure::Measure, properties::Property...) =
+    process_arguments(associated_domain(measure), measure, properties...)
+process_arguments(domain, properties::Property...) =
+    process_arguments(checkdomain(domain), associated_measure(domain), properties...)
+
 function process_arguments(domain::Domain{S}, measure::Measure{T}, properties::Property...) where {S,T}
     d, m = promote_domain_and_measure(domain, measure)
     process_arguments(d, m, properties...)
 end
-
-# all good now
 process_arguments(domain::Domain{T}, measure::Measure{T}, properties::Property...) where {T} =
+    (domain, measure, properties...)
+process_arguments(domain, measure::Measure{T}, properties::Property...) where {T} =
     (domain, measure, properties...)
 
 process_arguments(args...) = error("Arguments to integral or integrate functions not understood.")
@@ -79,30 +79,30 @@ integrate(qs::ChebyshevIntervalRule{T}, integrand) where {T} =
 integrate(qs::HalfLineRule{T}, integrand) where {T} =
     integrate(qs, integrand, HalfLine{T}())
 integrate(qs::RealLineRule{T}, integrand) where {T} =
-    integrate(qs, integrand, FullSpace{T}())
+    integrate(qs, integrand, RealLine{T}())
 
 ## The use of generators
 integrate(gen::Base.Generator, args...) =
     integrate(process_generator(gen)..., args...)
 # - catch something like f(x) for x in domain
-process_generator(gen::Base.Generator{<:Domain}) = (gen.f, gen.iter)
+process_generator(gen::Base.Generator{<:AnyDomain}) = (gen.f, gen.iter)
 # - catch something like f(x,y) for x in domain1, y in domain2
 process_generator(gen::Base.Generator{<:Base.Iterators.ProductIterator}) =
     process_generator(gen, gen.iter.iterators)
-function process_generator(gen, iterators::Tuple{Vararg{Domain}})
-    domain = productdomain(iterators...)
+function process_generator(gen, iterators::Tuple{Vararg{AnyDomain}})
+    domain = productdomain(map(domain, iterators)...)
     dims = map(dimension, iterators)
     (gen.f, domain)
 end
 
 integrate(integrand, args...) =
-    integrate(integrand, process_arguments(args...)...)
+    integrate1(integrand, process_arguments(args...)...)
+
+integrate1(integrand, domain, measure, properties...) =
+    integrate(suggestedstrategy(domain, measure, properties...), integrand, domain, measure, properties...)
 
 integrate(qs::QuadratureStrategy, integrand, args...) =
     integrate_start(qs, integrand, process_arguments(args...)...)
-
-integrate(integrand, domain::Domain, measure::Measure, properties::Property...) =
-    integrate(suggestedstrategy(domain, measure, properties...), integrand, domain, measure, properties...)
 
 
 # The process is as follows:
@@ -118,7 +118,7 @@ integrate(integrand, domain::Domain, measure::Measure, properties::Property...) 
 
 
 integrate_start(qs, integrand, domain, measure, properties...) =
-    integrate_property(qs, FunIntegrand{promote_type(numtype(domain),codomaintype(measure))}(integrand), domain, measure, properties...)
+    integrate_property(qs, FunIntegrand{promote_type(numtype(AsDomain(domain)),codomaintype(measure))}(integrand), domain, measure, properties...)
 
 integrate_start(qs, integrand::Integrand, domain, measure, properties...) =
     integrate_property(qs, integrand, domain, measure, properties...)
@@ -161,7 +161,11 @@ function integrate_domain(qs, integrand, domain, measure, properties...)
         sum_integrals(qs, integrand, domains, measure, properties...)
     else
         transformed_arguments = process_domain(qs, integrand, domain, measure, properties...)
-        integrate_done(qs, transformed_arguments...)
+        if domain_splits(transformed_arguments[2])
+            integrate_domain(qs, transformed_arguments...)
+        else
+            integrate_done(qs, transformed_arguments...)
+        end
     end
 end
 
@@ -191,7 +195,7 @@ fallback_integrate(qs, integrand, domain, measure, properties...) =
 # For quadgk, we only know how to compute intervals
 function apply_quad(qs::Q_quadgk, integrand, domain::AbstractInterval, measure::LebesgueMeasure, properties...)
     if isempty(domain)
-        zero_result(integrand, prectype(domain))
+        zero_result(integrand, prectype(AsDomain(domain)))
     else
         quadgk(integrand, extrema(domain)...; atol = qs.atol, rtol = qs.rtol, maxevals = qs.maxevals)
     end
@@ -261,7 +265,7 @@ function apply_quad(qs::HalfLineRule, integrand, domain::HalfLine, measure::Lebe
 end
 
 # Make sure that a real line rule is applied to a real line integral
-function apply_quad(qs::RealLineRule, integrand, domain::FullSpace, measure::LebesgueMeasure, properties...)
+function apply_quad(qs::RealLineRule, integrand, domain::RealLine, measure::LebesgueMeasure, properties...)
     x = points(qs)
     w = weights(qs)
     z = sum(w[i]*integrand(x[i]) for i in 1:length(x))

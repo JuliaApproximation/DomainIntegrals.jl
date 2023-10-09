@@ -253,6 +253,7 @@ HermiteWeight() = HermiteWeight{Float64}()
 hermite_weightfun(x) = exp(-x^2)
 
 similar(μ::HermiteWeight, ::Type{T}) where {T <: Real} = HermiteWeight{T}()
+support(μ::HermiteWeight{T}) where {T} = RealLine{T}()
 unsafe_weightfun(μ::HermiteWeight, x) = hermite_weightfun(x)
 
 weightfunction(μ::HermiteWeight) = hermite_weightfun
@@ -284,6 +285,7 @@ Display.object_parentheses(μ::GaussianWeight) = true
 lebesguemeasure(domain::UnitInterval{T}) where {T} = LebesgueUnit{T}()
 lebesguemeasure(domain::ChebyshevInterval{T}) where {T} = LegendreWeight{T}()
 lebesguemeasure(domain::FullSpace{T}) where {T} = Lebesgue{T}()
+lebesguemeasure(domain::RealLine{T}) where {T} = Lebesgue{T}()
 lebesguemeasure(domain::Domain{T}) where {T} = LebesgueDomain{T}(domain)
 # avoid propagating Int for intervals with integer eltype
 lebesguemeasure(domain::AbstractInterval{T}) where {T<:Integer} =
