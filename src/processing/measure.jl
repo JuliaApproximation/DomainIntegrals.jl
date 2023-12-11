@@ -123,7 +123,7 @@ function process_measure(qs::AdaptiveStrategy, integrand, domain::AbstractInterv
 end
 
 function measure_fetch_transformations(qs, domain, weight, properties...)
-    T = promote_type(numtype(AsDomain(domain)),numtype(weight))
+    T = promote_type(numtype(DomainRef(domain)),numtype(weight))
     I = TransformationLogIntegrand{T}()
     I_trans, domain_trans, weight_trans = process_measure(qs, I, domain, weight)
     I_trans.prefactor, I_trans.fun, domain_trans, weight_trans
