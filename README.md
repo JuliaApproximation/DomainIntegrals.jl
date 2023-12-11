@@ -5,7 +5,7 @@
 
 
 DomainIntegrals is a package designed to numerically evaluate integrals on
-domains like they are defined by the [DomainSets](https://github.com/JuliaApproximation/DomainSets.jl) package.
+domains as defined by the [DomainSets](https://github.com/JuliaApproximation/DomainSets.jl) package.
 
 The package does not include new methods for numerical integration. It relies
 on other Julia packages such as [QuadGK](https://github.com/JuliaMath/QuadGK.jl) and [HCubature](https://github.com/JuliaMath/HCubature.jl). The methods of those packages
