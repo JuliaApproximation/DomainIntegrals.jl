@@ -84,6 +84,28 @@ function test_measures()
     @test jacobi_α(m8) == 1/2
     @test jacobi_β(m8) == 1/2
     @test m8 == JacobiWeight(1/2, 1/2)
+
+    m9 = JacobiWeight(0.4, 0.7)
+    @test support(m9) == (-1..1)
+    @test !isdiscrete(m9)
+    @test iscontinuous(m9)
+    @test !isnormalized(m9)
+    @test domaintype(m8) == Float64
+    @test jacobi_α(m9) == 0.4
+    @test jacobi_β(m9) == 0.7
+    @test weightfun(m9, 0.22) ≈ (1-0.22)^0.4 * (1+0.22)^0.7
+    @test_throws AssertionError JacobiWeight(-2, 0)
+    @test_throws AssertionError JacobiWeight(0, -1)
+
+    m10 = UltrasphericalWeight(0.3)
+    @test support(m10) == (-1..1)
+    @test !isdiscrete(m10)
+    @test iscontinuous(m10)
+    @test !isnormalized(m10)
+    @test domaintype(m10) == Float64
+    @test jacobi_α(m10) == 0.3-0.5
+    @test jacobi_β(m10) == 0.3-0.5
+    @test weightfun(m10, 0.22) ≈ (1-0.22^2)^(0.3-0.5)
 end
 
 function test_discrete_measures()

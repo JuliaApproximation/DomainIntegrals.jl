@@ -7,6 +7,7 @@ export LebesgueMeasure,
     dx,
     LegendreWeight,
     JacobiWeight,
+    UltrasphericalWeight,
     ChebyshevWeight,
     ChebyshevTWeight,
     ChebyshevUWeight,
@@ -103,6 +104,9 @@ struct LegendreWeight{T} <: LebesgueMeasure{T}
 end
 LegendreWeight() = LegendreWeight{Float64}()
 
+jacobi_α(μ::LegendreWeight{T}) where {T} = zero(T)
+jacobi_β(μ::LegendreWeight{T}) where {T} = zero(T)
+
 similar(μ::LegendreWeight, ::Type{T}) where {T <: Real} = LegendreWeight{T}()
 support(μ::LegendreWeight{T}) where {T} = ChebyshevInterval{T}()
 
@@ -116,12 +120,23 @@ abstract type AbstractJacobiWeight{T} <: Weight{T} end
 ==(μ1::AbstractJacobiWeight, μ2::AbstractJacobiWeight) =
     jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
 
+support(μ::AbstractJacobiWeight{T}) where {T} = ChebyshevInterval{T}()
+
+jacobi_moment(α, β) = 2^(α+β+1) * gamma(α+1)*gamma(β+1) / gamma(α+β+2)
+
+moment(μ::AbstractJacobiWeight) = jacobi_moment(jacobi_α(μ), jacobi_β(μ))
+
+isnormalized(μ::AbstractJacobiWeight) = moment(μ) ≈ 1
+
 "The Jacobi weight on the interval `[-1,1]`."
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     α   ::  T
     β   ::  T
 
-    JacobiWeight{T}(α = zero(T), β = zero(T)) where {T} = new(α, β)
+    function JacobiWeight{T}(α = zero(T), β = zero(T)) where {T}
+        @assert (α > -1) && (β > -1)
+        new(α, β)
+    end
 end
 JacobiWeight() = JacobiWeight{Float64}()
 JacobiWeight(α, β) = JacobiWeight(promote(α, β)...)
@@ -131,7 +146,6 @@ JacobiWeight(α::N, β::N) where {N<:Number} = JacobiWeight(float(α), float(β)
 jacobi_weightfun(x, α, β) = (1-x)^α * (1+x)^β
 
 similar(μ::JacobiWeight, ::Type{T}) where {T <: Real} = JacobiWeight{T}(μ.α, μ.β)
-support(μ::JacobiWeight{T}) where {T} = ChebyshevInterval{T}()
 unsafe_weightfun(μ::JacobiWeight, x) = jacobi_weightfun(x, μ.α, μ.β)
 
 jacobi_α(μ::JacobiWeight) = μ.α
@@ -189,35 +203,74 @@ Base.show(io::IO, μ::ChebyshevUWeight) = print(io, "√(1+x)^2 dx  (ChebyshevU)
 Display.object_parentheses(μ::ChebyshevUWeight) = true
 
 
-convert(::Type{JacobiWeight}, μ::LegendreWeight{T}) where {T} =
-    JacobiWeight{T}(0, 0)
-convert(::Type{JacobiWeight}, μ::ChebyshevTWeight{T}) where {T} =
-    JacobiWeight{T}(-one(T)/2, -one(T)/2)
-convert(::Type{JacobiWeight}, μ::ChebyshevUWeight{T}) where {T} =
-    JacobiWeight{T}(one(T)/2, one(T)/2)
+"""
+The `Ultraspherical` (or `Gegenbauer`) weight is the measure on `[-1,1]` with
+the weight function `w(x) = (1-x^2)^(λ - 1/2)`.
+"""
+struct UltrasphericalWeight{T} <: DomainIntegrals.AbstractJacobiWeight{T}
+    λ   ::  T
 
-function convert(::Type{ChebyshevTWeight}, μ::JacobiWeight{T}) where {T}
+    function UltrasphericalWeight{T}(λ) where T
+        @assert λ > -one(T)/2
+        new(λ)
+    end
+end
+
+const GegenbauerWeight = UltrasphericalWeight
+
+UltrasphericalWeight(α::T) where {T<:AbstractFloat} = UltrasphericalWeight{T}(α)
+UltrasphericalWeight(α::N) where {N<:Number} = UltrasphericalWeight(float(α), float(β))
+
+ultraspherical_weightfun(x, λ::T) where T = (1-x^2)^(λ - one(T)/2)
+
+jacobi_α(μ::UltrasphericalWeight{T}) where {T} = μ.λ-one(T)/2
+jacobi_β(μ::UltrasphericalWeight{T}) where {T} = μ.λ-one(T)/2
+
+similar(μ::UltrasphericalWeight, ::Type{T}) where {T <: Real} =
+    UltrasphericalWeight{T}(μ.λ)
+unsafe_weightfun(μ::UltrasphericalWeight, x) = ultraspherical_weightfun(x, μ.λ)
+
+Base.show(io::IO, μ::UltrasphericalWeight) = print(io, "(1-x^2)^(λ - 1/2) dx  (Ultraspherical)")
+Display.object_parentheses(μ::UltrasphericalWeight) = true
+
+
+convert(::Type{JacobiWeight}, μ::AbstractJacobiWeight{T}) where T =
+    JacobiWeight{T}(jacobi_α(μ), jacobi_β(μ))
+convert(::Type{JacobiWeight{T}}, μ::AbstractJacobiWeight) where T =
+    JacobiWeight{T}(jacobi_α(μ), jacobi_β(μ))
+
+function convert(::Type{ChebyshevTWeight}, μ::AbstractJacobiWeight{T}) where T
     (jacobi_α(μ) ≈ -one(T)/2 && jacobi_β(μ) ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTWeight, μ))
     ChebyshevTWeight{T}()
 end
-
-function convert(::Type{ChebyshevUWeight}, μ::JacobiWeight{T}) where {T}
+function convert(::Type{ChebyshevTWeight{T}}, μ::AbstractJacobiWeight) where T
+    (jacobi_α(μ) ≈ -one(T)/2 && jacobi_β(μ) ≈ -one(T)/2) || throw(InexactError(:convert, ChebyshevTWeight, μ))
+    ChebyshevTWeight{T}()
+end
+function convert(::Type{ChebyshevUWeight}, μ::AbstractJacobiWeight{T}) where T
     (jacobi_α(μ) ≈ one(T)/2 && jacobi_β(μ) ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUWeight, μ))
     ChebyshevUWeight{T}()
 end
-
-function convert(::Type{LegendreWeight}, μ::JacobiWeight{T}) where {T}
-    (μ.α ≈ 0 && μ.β ≈ 0) || throw(InexactError(:convert, LegendreWeight, μ))
+function convert(::Type{ChebyshevUWeight{T}}, μ::AbstractJacobiWeight) where T
+    (jacobi_α(μ) ≈ one(T)/2 && jacobi_β(μ) ≈ one(T)/2) || throw(InexactError(:convert, ChebyshevUWeight, μ))
+    ChebyshevUWeight{T}()
+end
+function convert(::Type{LegendreWeight}, μ::AbstractJacobiWeight{T}) where {T}
+    (jacobi_α(μ) == 0 && jacobi_β(μ) == 0) || throw(InexactError(:convert, LegendreWeight, μ))
     LegendreWeight{T}()
 end
-
-jacobi_α(μ::LegendreWeight{T}) where {T} = zero(T)
-jacobi_β(μ::LegendreWeight{T}) where {T} = zero(T)
-
-==(μ1::AbstractJacobiWeight, μ2::LegendreWeight) =
-    jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
-==(μ1::LegendreWeight, μ2::AbstractJacobiWeight) =
-    jacobi_α(μ1) == jacobi_α(μ2) && jacobi_β(μ1) == jacobi_β(μ2)
+function convert(::Type{LegendreWeight{T}}, μ::AbstractJacobiWeight) where T
+    (jacobi_α(μ) == 0 && jacobi_β(μ) == 0) || throw(InexactError(:convert, LegendreWeight, μ))
+    LegendreWeight{T}()
+end
+function convert(::Type{UltrasphericalWeight}, μ::AbstractJacobiWeight{T}) where T
+    (jacobi_α(μ) == jacobi_β(μ)) || throw(InexactError(:convert, UltrasphericalWeight, μ))
+    UltrasphericalWeight{T}(jacobi_α(μ)+one(T)/2)
+end
+function convert(::Type{UltrasphericalWeight{T}}, μ::AbstractJacobiWeight) where T
+    (jacobi_α(μ) == jacobi_β(μ)) || throw(InexactError(:convert, UltrasphericalWeight, μ))
+    UltrasphericalWeight{T}(jacobi_α(μ)+one(T)/2)
+end
 
 
 "The generalised Laguerre measure on the halfline `[0,∞)`."
@@ -239,6 +292,8 @@ isnormalized(m::LaguerreWeight) = m.α == 0
 unsafe_weightfun(μ::LaguerreWeight, x) = laguerre_weightfun(x, μ.α)
 
 laguerre_α(μ::LaguerreWeight) = μ.α
+
+==(μ1::LaguerreWeight, μ2::LaguerreWeight) = laguerre_α(μ1) == laguerre_α(μ2)
 
 Base.show(io::IO, μ::LaguerreWeight) =
     laguerre_α(μ) == 0 ? print(io, "exp(-x)dx  (Laguerre)") : print(io, "x^$(laguerre_α(μ))exp(-x)dx  (Laguerre)")
@@ -262,13 +317,13 @@ Base.show(io::IO, μ::HermiteWeight) = print(io, "exp(-x^2)dx  (Hermite)")
 Display.object_parentheses(μ::HermiteWeight) = true
 
 
-"The Gaussian measure with weight exp(-|x|^2/2)."
+"The Gaussian measure with weight 1/sqrt(2π)^(n/2)*exp(-|x|^2/2)."
 struct GaussianWeight{T} <: Weight{T}
 end
 GaussianWeight() = GaussianWeight{Float64}()
 
 gaussian_weightfun(x, ::Type{T} = prectype(x)) where {T} =
-    1/(2*convert(T, pi))^(length(x)/2) * exp(-norm(x)^2)
+    1/(2*T(pi))^(length(x)/2) * exp(-norm(x)^2)
 
 similar(μ::GaussianWeight, ::Type{T}) where {T} = GaussianWeight{T}()
 isnormalized(μ::GaussianWeight) = true

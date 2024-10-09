@@ -2,6 +2,7 @@ module DomainIntegrals
 
 using QuadGK, LinearAlgebra
 using GaussQuadrature, FastGaussQuadrature, HCubature
+using SpecialFunctions
 
 using StaticArrays
 using IntervalSets, DomainSets
