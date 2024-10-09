@@ -128,7 +128,7 @@ JacobiWeight(α, β) = JacobiWeight(promote(α, β)...)
 JacobiWeight(α::T, β::T) where {T<:AbstractFloat} = JacobiWeight{T}(α, β)
 JacobiWeight(α::N, β::N) where {N<:Number} = JacobiWeight(float(α), float(β))
 
-jacobi_weightfun(x, α, β) = (1+x)^α * (1-x)^β
+jacobi_weightfun(x, α, β) = (1-x)^α * (1+x)^β
 
 similar(μ::JacobiWeight, ::Type{T}) where {T <: Real} = JacobiWeight{T}(μ.α, μ.β)
 support(μ::JacobiWeight{T}) where {T} = ChebyshevInterval{T}()
@@ -137,7 +137,7 @@ unsafe_weightfun(μ::JacobiWeight, x) = jacobi_weightfun(x, μ.α, μ.β)
 jacobi_α(μ::JacobiWeight) = μ.α
 jacobi_β(μ::JacobiWeight) = μ.β
 
-Base.show(io::IO, μ::JacobiWeight) = print(io, "(1+x)^$(jacobi_α(μ))(1-x)^$(jacobi_β(μ)) dx  (Jacobi)")
+Base.show(io::IO, μ::JacobiWeight) = print(io, "(1-x)^$(jacobi_α(μ))(1+x)^$(jacobi_β(μ)) dx  (Jacobi)")
 Display.object_parentheses(μ::JacobiWeight) = true
 
 
