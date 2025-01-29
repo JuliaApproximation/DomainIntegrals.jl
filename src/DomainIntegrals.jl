@@ -5,7 +5,7 @@ using GaussQuadrature, FastGaussQuadrature, HCubature
 using SpecialFunctions
 
 using StaticArrays
-using IntervalSets, DomainSets
+using IntervalSets, DomainSets, FunctionMaps
 using CompositeTypes.Display
 
 import Base: convert, checkbounds, length,

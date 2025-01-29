@@ -1,6 +1,7 @@
 
 using Test
-using DomainSets, HCubature, LinearAlgebra, StaticArrays
+using DomainSets, FunctionMaps, HCubature, LinearAlgebra
+using StaticArrays
 
 using DomainIntegrals
 

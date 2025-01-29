@@ -225,6 +225,7 @@ ultraspherical_weightfun(x, λ::T) where T = (1-x^2)^(λ - one(T)/2)
 
 jacobi_α(μ::UltrasphericalWeight{T}) where {T} = μ.λ-one(T)/2
 jacobi_β(μ::UltrasphericalWeight{T}) where {T} = μ.λ-one(T)/2
+ultraspherical_λ(μ::UltrasphericalWeight) = μ.λ
 
 similar(μ::UltrasphericalWeight, ::Type{T}) where {T <: Real} =
     UltrasphericalWeight{T}(μ.λ)
