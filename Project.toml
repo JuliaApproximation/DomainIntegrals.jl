@@ -18,7 +18,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 CompositeTypes = "0.1.3"
 DomainSets = "0.7.2"
-FastGaussQuadrature = "0.5"
+FastGaussQuadrature = "0.5, 1"
 GaussQuadrature = "0.5.7"
 HCubature = "1.4.0"
 IntervalSets = "0.7"
