@@ -19,7 +19,7 @@ Base.complex(f::Integrand{T}) where {T} =
 
 (*)(f, g::Integrand{T}) where {T} = integrand_times(f, g, g.fun)
 (*)(f::Map, g::Integrand{T}) where {T} = integrand_times(t->applymap(f,t), g, g.fun)
-(*)(f::ConstantMap, g::Integrand) = constant(f) * g
+(*)(f::ConstantMap, g::Integrand) = mapconstant(f) * g
 
 
 "Representation of an integrand function."

@@ -34,13 +34,13 @@ end
 
 DuffyTransform() = DuffyTransform{Float64}()
 
-DomainSets.similarmap(::DuffyTransform, ::Type{SVector{2,T}}) where T =
+FunctionMaps.similarmap(::DuffyTransform, ::Type{SVector{2,T}}) where T =
    DuffyTransform{T}()
 
-DomainSets.applymap(::DuffyTransform{T}, x) where T =
+FunctionMaps.applymap(::DuffyTransform{T}, x) where T =
    SVector{2,T}(x[1],(1-x[1])*x[2])
 
-DomainSets.jacobian(::DuffyTransform{T}, x) where T = SA{T}[1 0; -x[2] 1-x[1]]
-DomainSets.jacdet(::DuffyTransform{T}, x) where T = one(T)-x[1]
-DomainSets.mapsize(::DuffyTransform) = (2,2)
-DomainSets.diffvolume(::DuffyTransform) = x -> 1-x[1]
+FunctionMaps.jacobian(::DuffyTransform{T}, x) where T = SA{T}[1 0; -x[2] 1-x[1]]
+FunctionMaps.jacdet(::DuffyTransform{T}, x) where T = one(T)-x[1]
+FunctionMaps.mapsize(::DuffyTransform) = (2,2)
+FunctionMaps.diffvolume(::DuffyTransform) = x -> 1-x[1]
